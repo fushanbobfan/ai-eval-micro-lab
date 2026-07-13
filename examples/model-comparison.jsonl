@@ -1,0 +1,4 @@
+{"expected":"Paris is the capital of France","baseline":"France has Paris","candidate":"Paris is the capital of France"}
+{"expected":"Water freezes at zero Celsius","baseline":"Water freezes at zero Celsius","candidate":"Water freezes at 0 Celsius"}
+{"expected":"The answer is seven","baseline":"The answer is six","candidate":"The answer is seven"}
+{"expected":"No preference","baseline":"No preference","candidate":"No preference"}
