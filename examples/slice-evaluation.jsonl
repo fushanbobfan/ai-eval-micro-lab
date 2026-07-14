@@ -1,0 +1,4 @@
+{"expected":"Paris","predicted":"Paris","category":"geography"}
+{"expected":"Pacific Ocean","predicted":"pacific ocean","category":"geography"}
+{"expected":"4","predicted":"four","category":"arithmetic"}
+{"expected":"12","predicted":"12","category":"arithmetic"}

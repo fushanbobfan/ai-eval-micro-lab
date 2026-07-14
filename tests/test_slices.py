@@ -1,6 +1,11 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.slices import evaluate_slices
+from ai_eval_micro_lab.slices import evaluate_slices, main
 
 
 class SliceEvaluationTests(unittest.TestCase):
@@ -49,6 +54,33 @@ class SliceEvaluationTests(unittest.TestCase):
                 [{"expected": "a", "topic": "x"}],
                 slice_by="topic",
             )
+
+    def test_cli_reads_jsonl_and_reports_a_slice(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "slices.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "x", "predicted": "x", "topic": "short"})
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--slice-by", "topic"])
+
+            self.assertEqual(exit_code, 0)
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(report["slices"][0]["value"], "short")
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "slices.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset), "--slice-by", "topic"])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
