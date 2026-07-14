@@ -5,10 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import ai_eval_micro_lab
 from ai_eval_micro_lab.slices import evaluate_slices, main
 
 
 class SliceEvaluationTests(unittest.TestCase):
+    def test_slice_api_is_available_from_package(self):
+        self.assertIs(ai_eval_micro_lab.evaluate_slices, evaluate_slices)
+
     def test_reports_overall_and_sorted_slice_metrics(self):
         records = [
             {"expected": "yes", "predicted": "no", "topic": "zeta"},
