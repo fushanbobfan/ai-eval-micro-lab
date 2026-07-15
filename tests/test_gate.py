@@ -5,10 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import ai_eval_micro_lab
 from ai_eval_micro_lab.gate import evaluate_gate, main
 
 
 class QualityGateTests(unittest.TestCase):
+    def test_gate_api_is_available_from_package(self):
+        self.assertIs(ai_eval_micro_lab.evaluate_gate, evaluate_gate)
+
     def test_gate_passes_when_metrics_meet_thresholds(self):
         records = [
             {"expected": "blue sky", "predicted": "blue sky"},

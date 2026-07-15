@@ -29,4 +29,15 @@ python -m ai_eval_micro_lab.slices examples/slice-evaluation.jsonl --slice-by ca
 
 Use `--min-count` to omit undersized slices from the detailed list. The report keeps their slice and record counts visible, and the overall metrics always include every validated record. Invalid JSON, missing fields, non-string labels, and non-positive thresholds return exit code `2`.
 
+## CI quality gate
+
+Turn the standard evaluation metrics into a deterministic build check by setting one or both minimum scores:
+
+```powershell
+python -m ai_eval_micro_lab.gate examples/quality-gate.jsonl `
+  --min-exact-match 0.65 --min-token-f1 0.80
+```
+
+The JSON result includes the measured scores, configured thresholds, and a structured entry for each shortfall. Exit code `0` means every threshold passed, `1` means the dataset was valid but a quality threshold failed, and `2` means the input or configuration was invalid. An empty dataset is rejected so a missing evaluation artifact cannot silently pass a pipeline.
+
 This repository is intended for reproducible learning experiments. Future additions should include tests, a short explanation of the idea, and a runnable example.
