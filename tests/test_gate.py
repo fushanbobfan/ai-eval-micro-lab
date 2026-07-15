@@ -1,6 +1,11 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.gate import evaluate_gate
+from ai_eval_micro_lab.gate import evaluate_gate, main
 
 
 class QualityGateTests(unittest.TestCase):
@@ -48,6 +53,49 @@ class QualityGateTests(unittest.TestCase):
             evaluate_gate([])
         with self.assertRaisesRegex(ValueError, "string expected"):
             evaluate_gate([{"expected": "x"}])
+
+    def test_cli_returns_zero_for_a_passing_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "predictions.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "blue sky", "predicted": "blue sky"})
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--min-exact-match", "1"])
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_one_and_explains_a_quality_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "predictions.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "blue sky", "predicted": "green"}) + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--min-token-f1", "0.5"])
+
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(report["passed"])
+            self.assertEqual(report["failures"][0]["metric"], "token_f1")
+
+    def test_cli_returns_two_for_invalid_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "predictions.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
