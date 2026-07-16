@@ -6,6 +6,7 @@ from .metrics import exact_match, evaluate_records, token_f1
 
 __all__ = [
     "evaluate_gate",
+    "evaluate_regression_gate",
     "evaluate_slices",
     "exact_match",
     "evaluate_records",
@@ -18,6 +19,10 @@ def __getattr__(name: str) -> Any:
         from .gate import evaluate_gate
 
         return evaluate_gate
+    if name == "evaluate_regression_gate":
+        from .regression_gate import evaluate_regression_gate
+
+        return evaluate_regression_gate
     if name == "evaluate_slices":
         from .slices import evaluate_slices
 

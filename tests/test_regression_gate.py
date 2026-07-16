@@ -5,10 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import ai_eval_micro_lab
 from ai_eval_micro_lab.regression_gate import evaluate_regression_gate, main
 
 
 class RegressionGateTests(unittest.TestCase):
+    def test_regression_gate_api_is_available_from_package(self):
+        self.assertIs(ai_eval_micro_lab.evaluate_regression_gate, evaluate_regression_gate)
+
     def test_gate_passes_when_lower_bounds_clear_minimums(self):
         records = [
             {"expected": "blue sky", "baseline": "green", "candidate": "blue sky"},
