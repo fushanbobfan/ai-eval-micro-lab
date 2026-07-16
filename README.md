@@ -40,4 +40,17 @@ python -m ai_eval_micro_lab.gate examples/quality-gate.jsonl `
 
 The JSON result includes the measured scores, configured thresholds, and a structured entry for each shortfall. Exit code `0` means every threshold passed, `1` means the dataset was valid but a quality threshold failed, and `2` means the input or configuration was invalid. An empty dataset is rejected so a missing evaluation artifact cannot silently pass a pipeline.
 
+## Paired regression gate
+
+An absolute quality threshold can pass even when a new model is worse than the model it replaces. The regression gate compares `baseline` and `candidate` predictions on the same records, then requires the lower bound of each paired bootstrap interval to clear a configured minimum difference:
+
+```powershell
+python -m ai_eval_micro_lab.regression_gate examples/regression-gate.jsonl `
+  --min-exact-match-difference 0.02 `
+  --min-token-f1-difference 0.01 `
+  --samples 2000 --confidence 0.95 --seed 0
+```
+
+Exit code `0` means both lower bounds met their minimums, `1` reports every metric shortfall, and `2` identifies invalid data or configuration. A minimum of `0` asks the sampled lower confidence bound to support non-regression; negative minimums can express an explicit tolerance. The deterministic percentile interval describes uncertainty in the supplied evaluation set and should not be read as a guarantee about production behavior.
+
 This repository is intended for reproducible learning experiments. Future additions should include tests, a short explanation of the idea, and a runnable example.
