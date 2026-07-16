@@ -1,6 +1,11 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.regression_gate import evaluate_regression_gate
+from ai_eval_micro_lab.regression_gate import evaluate_regression_gate, main
 
 
 class RegressionGateTests(unittest.TestCase):
@@ -55,6 +60,56 @@ class RegressionGateTests(unittest.TestCase):
             evaluate_regression_gate([], samples=10)
         with self.assertRaisesRegex(ValueError, "string expected"):
             evaluate_regression_gate([{"expected": "x"}], samples=10)
+
+    def test_cli_returns_zero_for_a_passing_comparison(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "comparison.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "x", "baseline": "y", "candidate": "x"})
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--min-exact-match-difference",
+                        "0.5",
+                        "--samples",
+                        "20",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_one_for_a_regression(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "comparison.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "x", "baseline": "x", "candidate": "y"})
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--samples", "20"])
+
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "comparison.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset), "--samples", "20"])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":

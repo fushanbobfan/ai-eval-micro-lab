@@ -1,0 +1,3 @@
+{"expected":"blue sky","baseline":"green field","candidate":"blue sky"}
+{"expected":"warm day","baseline":"cold night","candidate":"warm day"}
+{"expected":"small model","baseline":"large system","candidate":"small model"}
