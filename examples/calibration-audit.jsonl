@@ -1,0 +1,6 @@
+{"expected":"Paris","predicted":"Paris","confidence":0.9}
+{"expected":"warm","predicted":"warm","confidence":0.75}
+{"expected":"Pacific","predicted":"Atlantic","confidence":0.7}
+{"expected":"four","predicted":"four","confidence":0.6}
+{"expected":"cat","predicted":"dog","confidence":0.3}
+{"expected":"blue sky","predicted":"blue sky","confidence":0.8}

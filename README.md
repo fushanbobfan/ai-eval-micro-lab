@@ -53,4 +53,15 @@ python -m ai_eval_micro_lab.regression_gate examples/regression-gate.jsonl `
 
 Exit code `0` means both lower bounds met their minimums, `1` reports every metric shortfall, and `2` identifies invalid data or configuration. A minimum of `0` asks the sampled lower confidence bound to support non-regression; negative minimums can express an explicit tolerance. The deterministic percentile interval describes uncertainty in the supplied evaluation set and should not be read as a guarantee about production behavior.
 
+## Confidence calibration audit
+
+Accuracy does not show whether a model's confidence estimates are trustworthy. The calibration command accepts standard `expected` and `predicted` strings plus a numeric `confidence` from `0` to `1`, interpreted as the model's estimated probability that its normalized exact-match answer is correct:
+
+```powershell
+python -m ai_eval_micro_lab.calibration examples/calibration-audit.jsonl `
+  --bins 5 --max-ece 0.12 --max-brier 0.15
+```
+
+The report includes accuracy, mean confidence, Brier score, expected calibration error (ECE), and every non-empty equal-width confidence bin. Brier score and ECE are both lower-is-better; the CLI exits `1` when either configured maximum is exceeded and `2` for invalid data or configuration. Bin boundaries are left-inclusive, with confidence `1` included in the final bin. Small evaluation sets can produce unstable calibration estimates, so the output should be treated as a dataset diagnostic rather than a production guarantee.
+
 This repository is intended for reproducible learning experiments. Future additions should include tests, a short explanation of the idea, and a runnable example.
