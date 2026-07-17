@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-eval-micro-lab"
-version = "0.5.0"
+version = "0.6.0"
 description = "Dependency-free utilities for small AI evaluation experiments"
 requires-python = ">=3.10"
 license = "MIT"
 
 [project.scripts]
 ai-eval = "ai_eval_micro_lab.cli:main"
+ai-eval-calibration = "ai_eval_micro_lab.calibration:main"
 ai-eval-compare = "ai_eval_micro_lab.comparison:main"
 ai-eval-gate = "ai_eval_micro_lab.gate:main"
 ai-eval-regression-gate = "ai_eval_micro_lab.regression_gate:main"

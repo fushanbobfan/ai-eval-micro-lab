@@ -1,9 +1,18 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.calibration import evaluate_calibration
+import ai_eval_micro_lab
+from ai_eval_micro_lab.calibration import evaluate_calibration, main
 
 
 class CalibrationTests(unittest.TestCase):
+    def test_calibration_api_is_available_from_package(self):
+        self.assertIs(ai_eval_micro_lab.evaluate_calibration, evaluate_calibration)
+
     def test_report_contains_weighted_ece_brier_score_and_bins(self):
         report = evaluate_calibration(
             [
@@ -63,6 +72,58 @@ class CalibrationTests(unittest.TestCase):
             with self.subTest(maximum=maximum):
                 with self.assertRaisesRegex(ValueError, "threshold"):
                     evaluate_calibration(records, max_ece=maximum)
+
+    def test_cli_returns_zero_for_a_passing_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "calibration.jsonl"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": "blue", "predicted": "blue", "confidence": 0.9}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [str(dataset), "--bins", "5", "--max-ece", "0.2", "--max-brier", "0.02"]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_one_and_reports_threshold_failures(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "calibration.jsonl"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": "blue", "predicted": "green", "confidence": 0.9}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--max-ece", "0.2"])
+
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(report["passed"])
+            self.assertEqual(
+                report["failures"][0]["metric"], "expected_calibration_error"
+            )
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "calibration.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":

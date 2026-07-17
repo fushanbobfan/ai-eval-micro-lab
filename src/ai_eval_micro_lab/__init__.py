@@ -5,6 +5,7 @@ from typing import Any
 from .metrics import exact_match, evaluate_records, token_f1
 
 __all__ = [
+    "evaluate_calibration",
     "evaluate_gate",
     "evaluate_regression_gate",
     "evaluate_slices",
@@ -15,6 +16,10 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    if name == "evaluate_calibration":
+        from .calibration import evaluate_calibration
+
+        return evaluate_calibration
     if name == "evaluate_gate":
         from .gate import evaluate_gate
 
