@@ -64,4 +64,17 @@ python -m ai_eval_micro_lab.calibration examples/calibration-audit.jsonl `
 
 The report includes accuracy, mean confidence, Brier score, expected calibration error (ECE), and every non-empty equal-width confidence bin. Brier score and ECE are both lower-is-better; the CLI exits `1` when either configured maximum is exceeded and `2` for invalid data or configuration. Bin boundaries are left-inclusive, with confidence `1` included in the final bin. Small evaluation sets can produce unstable calibration estimates, so the output should be treated as a dataset diagnostic rather than a production guarantee.
 
+## Selective prediction audit
+
+A model can abstain on low-confidence answers when downstream review is available. The selective prediction command evaluates one fixed confidence cutoff, reports the resulting coverage and exact-match risk among accepted answers, and can enforce both a minimum coverage and maximum risk:
+
+```powershell
+python -m ai_eval_micro_lab.selective examples/selective-prediction.jsonl `
+  --confidence-threshold 0.70 --min-coverage 0.60 --max-risk 0.25
+```
+
+The JSON report includes accepted and abstained counts, the selected operating point, and a risk-coverage curve across every observed confidence. Equal-confidence records enter the curve together, so reordering tied inputs cannot change the result. `risk_coverage_area` is a lower-is-better diagnostic computed from those tie-grouped steps. Exit code `0` means the configured operating point passed, `1` means coverage or risk failed, and `2` identifies invalid input or configuration.
+
+Choose the deployed confidence cutoff before evaluating a held-out dataset. Selecting it on the same examples used for the final report can overstate performance, and the measured tradeoff does not guarantee production behavior.
+
 This repository is intended for reproducible learning experiments. Future additions should include tests, a short explanation of the idea, and a runnable example.
