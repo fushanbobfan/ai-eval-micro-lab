@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from .metrics import exact_match
@@ -144,3 +148,46 @@ def evaluate_selective_prediction(
         },
         "failures": failures,
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--confidence-threshold", type=float, default=0.0)
+    parser.add_argument("--min-coverage", type=float, default=0.0)
+    parser.add_argument("--max-risk", type=float, default=1.0)
+    args = parser.parse_args(argv)
+
+    try:
+        report = evaluate_selective_prediction(
+            _load_jsonl(args.dataset),
+            confidence_threshold=args.confidence_threshold,
+            min_coverage=args.min_coverage,
+            max_risk=args.max_risk,
+        )
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    print(json.dumps(report, indent=2))
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,9 +1,21 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.selective import evaluate_selective_prediction
+import ai_eval_micro_lab
+from ai_eval_micro_lab.selective import evaluate_selective_prediction, main
 
 
 class SelectivePredictionTests(unittest.TestCase):
+    def test_selective_api_is_available_from_package(self):
+        self.assertIs(
+            ai_eval_micro_lab.evaluate_selective_prediction,
+            evaluate_selective_prediction,
+        )
+
     def test_report_contains_operating_point_curve_and_area(self):
         report = evaluate_selective_prediction(
             [
@@ -110,6 +122,65 @@ class SelectivePredictionTests(unittest.TestCase):
                         ],
                         **{name: value},
                     )
+
+    def test_cli_returns_zero_for_a_passing_operating_point(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "selective.jsonl"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": "blue", "predicted": "blue", "confidence": 0.9}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--confidence-threshold",
+                        "0.8",
+                        "--min-coverage",
+                        "1.0",
+                        "--max-risk",
+                        "0.0",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_one_for_a_failed_operating_point(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "selective.jsonl"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": "blue", "predicted": "green", "confidence": 0.9}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--max-risk", "0.2"])
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(
+                json.loads(stdout.getvalue())["failures"][0]["metric"],
+                "selective_risk",
+            )
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "selective.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
