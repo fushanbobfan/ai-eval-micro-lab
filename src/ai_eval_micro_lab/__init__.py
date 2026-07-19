@@ -6,6 +6,7 @@ from .metrics import exact_match, evaluate_records, token_f1
 
 __all__ = [
     "evaluate_calibration",
+    "evaluate_consistency",
     "evaluate_gate",
     "evaluate_regression_gate",
     "evaluate_selective_prediction",
@@ -21,6 +22,10 @@ def __getattr__(name: str) -> Any:
         from .calibration import evaluate_calibration
 
         return evaluate_calibration
+    if name == "evaluate_consistency":
+        from .consistency import evaluate_consistency
+
+        return evaluate_consistency
     if name == "evaluate_gate":
         from .gate import evaluate_gate
 
