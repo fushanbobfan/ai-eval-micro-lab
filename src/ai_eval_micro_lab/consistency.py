@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from itertools import combinations
+from pathlib import Path
 from typing import Any
 
 from .metrics import exact_match, normalize, token_f1
@@ -143,3 +147,48 @@ def evaluate_consistency(
         "failures": failures,
         "cases": case_reports,
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    records = []
+    with path.open(encoding="utf-8-sig") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--case-field", default="case_id")
+    parser.add_argument("--prediction-field", default="predicted")
+    parser.add_argument("--min-exact-agreement", type=float, default=0.0)
+    parser.add_argument("--min-token-f1-agreement", type=float, default=0.0)
+    args = parser.parse_args(argv)
+
+    try:
+        report = evaluate_consistency(
+            _load_jsonl(args.dataset),
+            case_field=args.case_field,
+            prediction_field=args.prediction_field,
+            min_exact_agreement=args.min_exact_agreement,
+            min_token_f1_agreement=args.min_token_f1_agreement,
+        )
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

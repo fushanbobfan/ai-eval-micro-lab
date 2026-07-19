@@ -1,7 +1,12 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import ai_eval_micro_lab
-from ai_eval_micro_lab.consistency import evaluate_consistency
+from ai_eval_micro_lab.consistency import evaluate_consistency, main
 
 
 class ConsistencyTests(unittest.TestCase):
@@ -94,6 +99,63 @@ class ConsistencyTests(unittest.TestCase):
                         ],
                         **{name: value},
                     )
+
+    def test_cli_returns_zero_for_consistent_repeated_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "repeated.jsonl"
+            dataset.write_text(
+                '{"prompt":"p1","answer":"Blue sky"}\n'
+                '{"prompt":"p1","answer":"blue sky!"}\n',
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--case-field",
+                        "prompt",
+                        "--prediction-field",
+                        "answer",
+                        "--min-exact-agreement",
+                        "1.0",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_one_when_agreement_threshold_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "repeated.jsonl"
+            dataset.write_text(
+                '{"case_id":"p1","predicted":"left"}\n'
+                '{"case_id":"p1","predicted":"right"}\n',
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [str(dataset), "--min-token-f1-agreement", "0.5"]
+                )
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(
+                json.loads(stdout.getvalue())["failures"][0]["metric"],
+                "token_f1_agreement",
+            )
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "repeated.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
