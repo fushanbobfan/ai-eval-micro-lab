@@ -40,6 +40,20 @@ python -m ai_eval_micro_lab.gate examples/quality-gate.jsonl `
 
 The JSON result includes the measured scores, configured thresholds, and a structured entry for each shortfall. Exit code `0` means every threshold passed, `1` means the dataset was valid but a quality threshold failed, and `2` means the input or configuration was invalid. An empty dataset is rejected so a missing evaluation artifact cannot silently pass a pipeline.
 
+## Repeated-output consistency
+
+Accuracy against a reference does not show whether repeated runs return the same answer. Group multiple predictions for each case and measure pairwise normalized exact agreement plus pairwise token F1:
+
+```powershell
+python -m ai_eval_micro_lab.consistency examples/output-consistency.jsonl `
+  --min-exact-agreement 0.45 `
+  --min-token-f1-agreement 0.60
+```
+
+The report includes pair-weighted overall metrics and a deterministic breakdown for every case with at least two predictions. Singleton cases remain visible in the summary but cannot contribute an agreement pair. Use `--case-field` and `--prediction-field` when an existing JSONL export uses different names. Exit code `0` means both minimums passed, `1` reports threshold shortfalls, and `2` identifies invalid data or configuration.
+
+Repeated samples should use the same prompt, decoding settings, and model version if the goal is to isolate run-to-run variability. Pairwise agreement describes the supplied cases; correlated samples or a small test set can make the result look more stable than future traffic.
+
 ## Paired regression gate
 
 An absolute quality threshold can pass even when a new model is worse than the model it replaces. The regression gate compares `baseline` and `candidate` predictions on the same records, then requires the lower bound of each paired bootstrap interval to clear a configured minimum difference:

@@ -1,0 +1,7 @@
+{"case_id":"capital-france","predicted":"Paris"}
+{"case_id":"capital-france","predicted":"paris."}
+{"case_id":"capital-france","predicted":"The capital is Paris"}
+{"case_id":"primary-color","predicted":"Blue"}
+{"case_id":"primary-color","predicted":"blue"}
+{"case_id":"primary-color","predicted":"Blue"}
+{"case_id":"singleton","predicted":"Reported but excluded from agreement"}
