@@ -1,7 +1,12 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import ai_eval_micro_lab
-from ai_eval_micro_lab.classification import evaluate_classification
+from ai_eval_micro_lab.classification import evaluate_classification, main
 
 
 class ClassificationTests(unittest.TestCase):
@@ -68,6 +73,46 @@ class ClassificationTests(unittest.TestCase):
             with self.subTest(minimum=minimum):
                 with self.assertRaisesRegex(ValueError, "threshold"):
                     evaluate_classification(records, min_macro_f1=minimum)
+
+    def test_cli_returns_one_with_structured_threshold_failures(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "classification.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "cat", "predicted": "dog"}) + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--min-accuracy", "0.5"])
+
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(report["passed"])
+            self.assertEqual(report["failures"][0]["metric"], "accuracy")
+
+    def test_cli_returns_zero_for_a_passing_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "classification.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "cat", "predicted": "cat"}) + "\n",
+                encoding="utf-8",
+            )
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                exit_code = main([str(dataset), "--min-macro-f1", "1"])
+
+            self.assertEqual(exit_code, 0)
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "classification.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
