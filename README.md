@@ -9,6 +9,19 @@ python -m ai_eval_micro_lab.cli examples.jsonl
 python -m unittest discover -s tests
 ```
 
+## Multiclass classification evaluation
+
+Free-form answer metrics can hide which discrete classes a classifier confuses. The classification command treats `expected` and `predicted` as exact, case-sensitive labels and reports a row-expected, column-predicted confusion matrix alongside accuracy and per-class precision, recall, and F1:
+
+```powershell
+python -m ai_eval_micro_lab.classification examples/classification-evaluation.jsonl `
+  --min-accuracy 0.70 --min-macro-f1 0.65
+```
+
+Labels are the sorted union of expected and predicted values, so a class produced only by the model remains visible with zero support. The report also includes macro precision, macro recall, macro F1, and support-weighted F1. Macro metrics give every observed label equal weight, while weighted F1 reflects the expected-label distribution in the supplied data.
+
+Exit code `0` means the configured accuracy and macro-F1 minimums passed, `1` reports structured threshold shortfalls, and `2` identifies invalid JSON, labels, or configuration. Choose thresholds on separate development data when possible; results on one dataset do not establish future class balance or performance.
+
 ## Paired model comparison
 
 The comparison command evaluates `baseline` and `candidate` predictions against the same `expected` answer. It reports the mean paired improvement for both metrics with deterministic percentile bootstrap confidence intervals.
