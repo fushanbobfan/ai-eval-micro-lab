@@ -1,0 +1,3 @@
+{"query_id":"docs-auth","relevant":["auth-guide","token-reference"],"retrieved":["api-overview","auth-guide","token-reference"]}
+{"query_id":"refund-policy","relevant":["refund-policy"],"retrieved":["refund-policy","billing-faq"]}
+{"query_id":"rate-limits","relevant":["rate-limit-guide"],"retrieved":["sdk-guide","rate-limit-guide","status-page"]}
