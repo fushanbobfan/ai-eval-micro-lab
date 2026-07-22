@@ -10,6 +10,7 @@ __all__ = [
     "evaluate_consistency",
     "evaluate_gate",
     "evaluate_regression_gate",
+    "evaluate_retrieval",
     "evaluate_selective_prediction",
     "evaluate_slices",
     "exact_match",
@@ -39,6 +40,10 @@ def __getattr__(name: str) -> Any:
         from .regression_gate import evaluate_regression_gate
 
         return evaluate_regression_gate
+    if name == "evaluate_retrieval":
+        from .retrieval import evaluate_retrieval
+
+        return evaluate_retrieval
     if name == "evaluate_selective_prediction":
         from .selective import evaluate_selective_prediction
 
