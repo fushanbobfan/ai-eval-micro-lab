@@ -22,6 +22,20 @@ Labels are the sorted union of expected and predicted values, so a class produce
 
 Exit code `0` means the configured accuracy and macro-F1 minimums passed, `1` reports structured threshold shortfalls, and `2` identifies invalid JSON, labels, or configuration. Choose thresholds on separate development data when possible; results on one dataset do not establish future class balance or performance.
 
+## Ranked retrieval evaluation
+
+Evaluate search or retrieval-augmented generation candidates with binary relevance labels at several cutoffs:
+
+```powershell
+python -m ai_eval_micro_lab.retrieval examples/retrieval-ranking.jsonl `
+  --cutoff 1 --cutoff 3 --gate-cutoff 3 `
+  --min-mrr 0.65 --min-recall 0.90 --min-ndcg 0.75
+```
+
+Each JSONL object needs a unique string `query_id`, a non-empty list of unique `relevant` document IDs, and an ordered list of unique `retrieved` IDs. The report includes Hit Rate, mean reciprocal rank, mean recall, and mean normalized discounted cumulative gain at every configured cutoff, plus each query's first relevant rank. Use the field-name flags when an export uses different keys.
+
+Exit code `0` means all minimums passed at `--gate-cutoff`, `1` reports structured metric shortfalls, and `2` identifies invalid JSON, duplicate IDs, empty relevance judgments, or invalid configuration. These metrics assume binary and complete relevance judgments; unjudged documents, position bias, or a small query set can distort offline results and do not establish downstream answer quality.
+
 ## Paired model comparison
 
 The comparison command evaluates `baseline` and `candidate` predictions against the same `expected` answer. It reports the mean paired improvement for both metrics with deterministic percentile bootstrap confidence intervals.
