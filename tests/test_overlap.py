@@ -65,6 +65,16 @@ class DatasetOverlapTests(unittest.TestCase):
         self.assertEqual(len(report["overlap"]["matches"]), 2)
         self.assertTrue(report["overlap"]["details_truncated"])
 
+        no_details = audit_dataset_overlap(
+            [{"id": "r", "text": "same"}],
+            [{"id": "c", "text": "same"}],
+            max_overlap_rate=1.0,
+            max_details=0,
+        )
+        self.assertEqual(no_details["overlap"]["pair_count"], 1)
+        self.assertEqual(no_details["overlap"]["matches"], [])
+        self.assertTrue(no_details["overlap"]["details_truncated"])
+
     def test_threshold_failure_reports_excess(self):
         report = audit_dataset_overlap(
             [{"id": "r", "text": "duplicate"}],

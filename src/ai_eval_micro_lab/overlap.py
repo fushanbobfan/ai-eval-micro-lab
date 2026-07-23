@@ -7,7 +7,7 @@ import json
 import math
 import sys
 import unicodedata
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -128,23 +128,35 @@ def audit_dataset_overlap(
         candidate_group = sorted(candidate_by_key[key])
         overlapping_reference_ids.update(item[0] for item in reference_group)
         overlapping_candidate_ids.update(item[0] for item in candidate_group)
+        reference_text_counts = Counter(text for _, text in reference_group)
+        candidate_text_counts = Counter(text for _, text in candidate_group)
+        group_pair_count = len(reference_group) * len(candidate_group)
+        group_exact_count = sum(
+            count * candidate_text_counts[text]
+            for text, count in reference_text_counts.items()
+        )
+        exact_pair_count += group_exact_count
+        normalized_only_pair_count += group_pair_count - group_exact_count
+
+        if len(matches) >= max_details:
+            continue
         for reference_id, reference_text in reference_group:
             for candidate_id, candidate_text in candidate_group:
-                match_type = (
-                    "exact" if reference_text == candidate_text else "normalized"
+                matches.append(
+                    {
+                        "reference_id": reference_id,
+                        "candidate_id": candidate_id,
+                        "match_type": (
+                            "exact"
+                            if reference_text == candidate_text
+                            else "normalized"
+                        ),
+                    }
                 )
-                if match_type == "exact":
-                    exact_pair_count += 1
-                else:
-                    normalized_only_pair_count += 1
-                if len(matches) < max_details:
-                    matches.append(
-                        {
-                            "reference_id": reference_id,
-                            "candidate_id": candidate_id,
-                            "match_type": match_type,
-                        }
-                    )
+                if len(matches) >= max_details:
+                    break
+            if len(matches) >= max_details:
+                break
 
     pair_count = exact_pair_count + normalized_only_pair_count
     candidate_overlap_rate = len(overlapping_candidate_ids) / len(candidate)
