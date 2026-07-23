@@ -36,6 +36,20 @@ Each JSONL object needs a unique string `query_id`, a non-empty list of unique `
 
 Exit code `0` means all minimums passed at `--gate-cutoff`, `1` reports structured metric shortfalls, and `2` identifies invalid JSON, duplicate IDs, empty relevance judgments, or invalid configuration. These metrics assume binary and complete relevance judgments; unjudged documents, position bias, or a small query set can distort offline results and do not establish downstream answer quality.
 
+## Dataset overlap audit
+
+Accidental reuse between training, development, and evaluation exports can make an offline score misleading. Compare two JSONL datasets by stable record ID and text:
+
+```powershell
+python -m ai_eval_micro_lab.overlap `
+  examples/overlap-reference.jsonl examples/overlap-candidate.jsonl `
+  --max-overlap-rate 0.20 --max-details 25
+```
+
+The audit reports raw exact matches separately from matches found after Unicode NFKC normalization, case folding, and whitespace collapsing. Counts include every matching pair and every distinct record involved, while `--max-details` bounds the ID-only match list. Source text is not copied into the JSON report.
+
+Exit code `0` means the candidate-record overlap rate is within the configured maximum, `1` reports a threshold failure, and `2` identifies invalid JSON, duplicate IDs, blank text, or invalid configuration. Use `--id-field` and `--text-field` for different schemas. This is a deterministic exact-key audit, not a semantic or near-duplicate detector; paraphrases and differently tokenized content can remain undetected, and an overlap rate alone does not prove whether reuse was improper.
+
 ## Paired model comparison
 
 The comparison command evaluates `baseline` and `candidate` predictions against the same `expected` answer. It reports the mean paired improvement for both metrics with deterministic percentile bootstrap confidence intervals.

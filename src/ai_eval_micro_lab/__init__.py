@@ -8,6 +8,7 @@ __all__ = [
     "evaluate_calibration",
     "evaluate_classification",
     "evaluate_consistency",
+    "audit_dataset_overlap",
     "evaluate_gate",
     "evaluate_regression_gate",
     "evaluate_retrieval",
@@ -20,6 +21,10 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    if name == "audit_dataset_overlap":
+        from .overlap import audit_dataset_overlap
+
+        return audit_dataset_overlap
     if name == "evaluate_calibration":
         from .calibration import evaluate_calibration
 
