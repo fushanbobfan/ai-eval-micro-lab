@@ -1,8 +1,14 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import ai_eval_micro_lab
 from ai_eval_micro_lab.overlap import (
     audit_dataset_overlap,
+    main,
     normalize_overlap_text,
 )
 
@@ -106,6 +112,61 @@ class DatasetOverlapTests(unittest.TestCase):
             with self.subTest(kwargs=kwargs, message=message):
                 with self.assertRaisesRegex(ValueError, message):
                     audit_dataset_overlap(left, right, **kwargs)
+
+    def test_cli_reports_gate_failure_and_invalid_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            reference_path = Path(directory) / "reference.jsonl"
+            candidate_path = Path(directory) / "candidate.jsonl"
+            reference_path.write_text(
+                json.dumps({"id": "r", "text": "shared"}) + "\n",
+                encoding="utf-8",
+            )
+            candidate_path.write_text(
+                json.dumps({"id": "c", "text": "SHARED"}) + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(reference_path), str(candidate_path)])
+
+            self.assertEqual(exit_code, 1)
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(
+                report["failures"][0]["metric"], "candidate_overlap_rate"
+            )
+
+            candidate_path.write_text("{\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    main([str(reference_path), str(candidate_path)]),
+                    2,
+                )
+
+    def test_cli_passes_when_overlap_is_within_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            reference_path = Path(directory) / "reference.jsonl"
+            candidate_path = Path(directory) / "candidate.jsonl"
+            reference_path.write_text(
+                json.dumps({"id": "r", "text": "shared"}) + "\n",
+                encoding="utf-8",
+            )
+            candidate_path.write_text(
+                json.dumps({"id": "c", "text": "different"}) + "\n",
+                encoding="utf-8",
+            )
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                exit_code = main(
+                    [
+                        str(reference_path),
+                        str(candidate_path),
+                        "--max-overlap-rate",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
 
 
 if __name__ == "__main__":

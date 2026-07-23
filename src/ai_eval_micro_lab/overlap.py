@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 import unicodedata
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 
@@ -173,3 +177,54 @@ def audit_dataset_overlap(
         "thresholds": {"max_overlap_rate": maximum},
         "failures": failures,
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(
+                    f"invalid JSON in {path} on line {line_number}"
+                ) from error
+            if not isinstance(record, dict):
+                raise ValueError(
+                    f"{path} line {line_number} must contain a JSON object"
+                )
+            records.append(record)
+    return records
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("reference_dataset", type=Path)
+    parser.add_argument("candidate_dataset", type=Path)
+    parser.add_argument("--id-field", default="id")
+    parser.add_argument("--text-field", default="text")
+    parser.add_argument("--max-overlap-rate", type=float, default=0.0)
+    parser.add_argument("--max-details", type=int, default=100)
+    args = parser.parse_args(argv)
+
+    try:
+        report = audit_dataset_overlap(
+            _load_jsonl(args.reference_dataset),
+            _load_jsonl(args.candidate_dataset),
+            id_field=args.id_field,
+            text_field=args.text_field,
+            max_overlap_rate=args.max_overlap_rate,
+            max_details=args.max_details,
+        )
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    print(json.dumps(report, indent=2))
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
