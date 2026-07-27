@@ -1,0 +1,4 @@
+{"id":"photo-001","expected":["animal","outdoor"],"predicted":["animal","outdoor"]}
+{"id":"photo-002","expected":["animal","indoor"],"predicted":["animal"]}
+{"id":"photo-003","expected":["vehicle","outdoor"],"predicted":["vehicle","night"]}
+{"id":"photo-004","expected":[],"predicted":[]}

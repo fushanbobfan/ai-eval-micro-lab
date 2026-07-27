@@ -1,6 +1,12 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.multilabel import evaluate_multilabel
+import ai_eval_micro_lab
+from ai_eval_micro_lab.multilabel import evaluate_multilabel, main
 
 
 class MultilabelEvaluationTests(unittest.TestCase):
@@ -16,6 +22,7 @@ class MultilabelEvaluationTests(unittest.TestCase):
             ]
         )
 
+        self.assertIs(ai_eval_micro_lab.evaluate_multilabel, evaluate_multilabel)
         self.assertEqual(report["labels"], ["cat", "dog", "indoor", "outdoor"])
         self.assertEqual(
             [item["label"] for item in report["per_label"]],
@@ -85,6 +92,71 @@ class MultilabelEvaluationTests(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaisesRegex(ValueError, "threshold"):
                     evaluate_multilabel(records, min_micro_f1=value)
+
+    def test_cli_returns_zero_for_a_passing_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "multilabel.jsonl"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": ["cat", "indoor"], "predicted": ["indoor", "cat"]}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--min-micro-f1",
+                        "1",
+                        "--min-macro-f1",
+                        "1",
+                        "--max-hamming-loss",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_one_with_structured_threshold_failures(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "multilabel.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": ["cat"], "predicted": ["dog"]}) + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--min-micro-f1",
+                        "0.5",
+                        "--max-hamming-loss",
+                        "0.5",
+                    ]
+                )
+
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(
+                [failure["metric"] for failure in report["failures"]],
+                ["micro_f1", "hamming_loss"],
+            )
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "multilabel.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
