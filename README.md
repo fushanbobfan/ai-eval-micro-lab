@@ -22,6 +22,21 @@ Labels are the sorted union of expected and predicted values, so a class produce
 
 Exit code `0` means the configured accuracy and macro-F1 minimums passed, `1` reports structured threshold shortfalls, and `2` identifies invalid JSON, labels, or configuration. Choose thresholds on separate development data when possible; results on one dataset do not establish future class balance or performance.
 
+## Multi-label classification evaluation
+
+When one record can have several correct labels, evaluate exact JSON arrays instead of flattening the task into a single class:
+
+```powershell
+python -m ai_eval_micro_lab.multilabel examples/multilabel-evaluation.jsonl `
+  --min-micro-f1 0.70 --min-macro-f1 0.50 --max-hamming-loss 0.20
+```
+
+Each JSONL object needs `expected` and `predicted` arrays containing unique, non-empty, case-sensitive string labels. Individual arrays may be empty, but at least one label must appear somewhere in the dataset. Label order does not affect the result.
+
+The report includes per-label true/false positives and negatives, precision, recall, and F1. Aggregate results include micro, macro, and support-weighted metrics; exact-set subset accuracy; sample-averaged Jaccard similarity; average expected and predicted label counts; and Hamming loss normalized by records times the observed label vocabulary. A label produced only by the model remains visible with zero expected support. An empty expected/predicted pair contributes a sample Jaccard score of `1`.
+
+Exit code `0` means the configured F1 minimums and Hamming-loss maximum passed, `1` reports every structured threshold failure, and `2` identifies invalid JSON, duplicate labels, malformed arrays, or invalid configuration. These metrics evaluate already-selected label sets. Choose model score cutoffs and quality gates on separate development data when possible; rare labels, incomplete annotations, and label dependence can make one dataset's macro and Hamming results misleading.
+
 ## Ranked retrieval evaluation
 
 Evaluate search or retrieval-augmented generation candidates with binary relevance labels at several cutoffs:
