@@ -1,0 +1,6 @@
+{"expected":"cat","scores":{"bird":0.05,"cat":0.85,"dog":0.10}}
+{"expected":"dog","scores":{"bird":0.10,"cat":0.25,"dog":0.65}}
+{"expected":"bird","scores":{"bird":0.55,"cat":0.30,"dog":0.15}}
+{"expected":"cat","scores":{"bird":0.10,"cat":0.45,"dog":0.45}}
+{"expected":"dog","scores":{"bird":0.15,"cat":0.50,"dog":0.35}}
+{"expected":"bird","scores":{"bird":0.40,"cat":0.20,"dog":0.40}}

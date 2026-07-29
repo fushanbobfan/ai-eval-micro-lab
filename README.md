@@ -22,6 +22,24 @@ Labels are the sorted union of expected and predicted values, so a class produce
 
 Exit code `0` means the configured accuracy and macro-F1 minimums passed, `1` reports structured threshold shortfalls, and `2` identifies invalid JSON, labels, or configuration. Choose thresholds on separate development data when possible; results on one dataset do not establish future class balance or performance.
 
+## Probabilistic classification evaluation
+
+Hard labels hide whether the model assigned sensible probability mass to alternatives. Evaluate a complete multiclass probability distribution on every record:
+
+```powershell
+python -m ai_eval_micro_lab.probabilities `
+  examples/probabilistic-classification.jsonl `
+  --top-k 2 --gate-top-k 2 `
+  --min-accuracy 0.60 --min-top-k-accuracy 0.90 `
+  --max-log-loss 0.80 --max-brier-score 0.45 --max-ece 0.30
+```
+
+Each JSONL object needs a non-empty string `expected` label and a `scores` object whose finite values are between `0` and `1`. Every record must use the same label set, include its expected label, and sum to `1` within the configured tolerance. Equal probabilities are ranked by label for deterministic top-k results.
+
+The report includes top-1 and requested top-k accuracy, natural-log multiclass log loss, the unnormalized multiclass Brier score, mean top-label confidence, equal-width top-label ECE, per-class support/prediction/probability summaries, and the count of records whose expected class received zero probability. Log loss floors zero expected probabilities at `1e-15` by default so the JSON report remains finite; the floor and probability-sum tolerance are explicit settings in the output.
+
+Exit code `0` means every configured minimum and maximum passed, `1` reports structured threshold failures, and `2` identifies invalid JSON, inconsistent labels, malformed probabilities, unsafe output aliasing, or invalid configuration. Brier score here is the sum across classes and ranges from `0` to `2`; it is not divided by the number of classes. Probability quality on one labeled dataset does not establish calibration after class, data, or model drift, and thresholds should be chosen on separate development data.
+
 ## Multi-label classification evaluation
 
 When one record can have several correct labels, evaluate exact JSON arrays instead of flattening the task into a single class:
