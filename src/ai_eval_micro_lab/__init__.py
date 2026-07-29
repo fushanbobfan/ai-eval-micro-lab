@@ -11,6 +11,7 @@ __all__ = [
     "audit_dataset_overlap",
     "evaluate_gate",
     "evaluate_multilabel",
+    "evaluate_probabilistic_classification",
     "evaluate_regression_gate",
     "evaluate_retrieval",
     "evaluate_selective_prediction",
@@ -46,6 +47,10 @@ def __getattr__(name: str) -> Any:
         from .multilabel import evaluate_multilabel
 
         return evaluate_multilabel
+    if name == "evaluate_probabilistic_classification":
+        from .probabilities import evaluate_probabilistic_classification
+
+        return evaluate_probabilistic_classification
     if name == "evaluate_regression_gate":
         from .regression_gate import evaluate_regression_gate
 
