@@ -1,8 +1,16 @@
+import contextlib
+import io
+import json
 import math
+import tempfile
 import unittest
+from pathlib import Path
 
 import ai_eval_micro_lab
-from ai_eval_micro_lab.probabilities import evaluate_probabilistic_classification
+from ai_eval_micro_lab.probabilities import (
+    evaluate_probabilistic_classification,
+    main,
+)
 
 
 class ProbabilisticClassificationTests(unittest.TestCase):
@@ -106,6 +114,69 @@ class ProbabilisticClassificationTests(unittest.TestCase):
             evaluate_probabilistic_classification(
                 [{"expected": "z", "scores": {"x": 0.5, "y": 0.5}}]
             )
+
+    def test_cli_writes_a_report_and_returns_one_for_a_failed_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "probabilities.jsonl"
+            output = root / "report.json"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": "yes", "scores": {"yes": 0.2, "no": 0.8}}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            exit_code = main(
+                [
+                    str(dataset),
+                    "--top-k",
+                    "2",
+                    "--gate-top-k",
+                    "2",
+                    "--min-top-k-accuracy",
+                    "1",
+                    "--max-log-loss",
+                    "1",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(report["passed"])
+            self.assertEqual(report["metrics"]["top_k_accuracy"]["2"], 1.0)
+            self.assertEqual(report["failures"][0]["metric"], "log_loss")
+
+    def test_cli_prints_a_passing_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "probabilities.jsonl"
+            dataset.write_text(
+                json.dumps(
+                    {"expected": "yes", "scores": {"yes": 0.9, "no": 0.1}}
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main([str(dataset), "--min-accuracy", "1"])
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_returns_two_for_invalid_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "probabilities.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":

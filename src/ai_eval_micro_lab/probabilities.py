@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 
@@ -283,3 +287,71 @@ def evaluate_probabilistic_classification(
             "log_floor": log_floor,
         },
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument(
+        "--top-k",
+        action="append",
+        type=int,
+        default=[1],
+        help="repeat to report another cutoff; top-1 is always included",
+    )
+    parser.add_argument("--gate-top-k", type=int, default=1)
+    parser.add_argument("--bins", type=int, default=10)
+    parser.add_argument("--min-accuracy", type=float)
+    parser.add_argument("--min-top-k-accuracy", type=float)
+    parser.add_argument("--max-log-loss", type=float)
+    parser.add_argument("--max-brier-score", type=float)
+    parser.add_argument("--max-ece", type=float)
+    parser.add_argument("--probability-tolerance", type=float, default=1e-6)
+    parser.add_argument("--log-floor", type=float, default=1e-15)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        report = evaluate_probabilistic_classification(
+            _load_jsonl(args.dataset),
+            bins=args.bins,
+            top_k=args.top_k,
+            gate_top_k=args.gate_top_k,
+            min_accuracy=args.min_accuracy,
+            min_top_k_accuracy=args.min_top_k_accuracy,
+            max_log_loss=args.max_log_loss,
+            max_brier_score=args.max_brier_score,
+            max_ece=args.max_ece,
+            probability_tolerance=args.probability_tolerance,
+            log_floor=args.log_floor,
+        )
+        rendered = json.dumps(report, indent=2) + "\n"
+        if args.output is None:
+            print(rendered, end="")
+        else:
+            args.output.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
