@@ -115,6 +115,35 @@ class ProbabilisticClassificationTests(unittest.TestCase):
                 [{"expected": "z", "scores": {"x": 0.5, "y": 0.5}}]
             )
 
+    def test_zero_expected_probability_uses_the_configured_log_floor(self):
+        report = evaluate_probabilistic_classification(
+            [{"expected": "yes", "scores": {"yes": 0.0, "no": 1.0}}],
+            log_floor=1e-6,
+        )
+
+        self.assertEqual(report["metrics"]["zero_expected_probability_count"], 1)
+        self.assertAlmostEqual(report["metrics"]["log_loss"], -math.log(1e-6))
+        self.assertTrue(math.isfinite(report["metrics"]["log_loss"]))
+
+    def test_invalid_configuration_and_scores_are_rejected(self):
+        records = [{"expected": "x", "scores": {"x": 0.8, "y": 0.2}}]
+        for kwargs in (
+            {"bins": True},
+            {"top_k": (0,)},
+            {"top_k": (1,), "gate_top_k": True},
+            {"top_k": (3,)},
+            {"probability_tolerance": 0.2},
+            {"log_floor": 0},
+            {"max_brier_score": 2.1},
+        ):
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    evaluate_probabilistic_classification(records, **kwargs)
+        with self.assertRaisesRegex(ValueError, "between 0 and 1"):
+            evaluate_probabilistic_classification(
+                [{"expected": "x", "scores": {"x": True, "y": 0.0}}]
+            )
+
     def test_cli_writes_a_report_and_returns_one_for_a_failed_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -177,6 +206,23 @@ class ProbabilisticClassificationTests(unittest.TestCase):
                 exit_code = main([str(dataset)])
 
             self.assertEqual(exit_code, 2)
+
+    def test_cli_refuses_to_overwrite_the_source_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "probabilities.jsonl"
+            original = (
+                json.dumps(
+                    {"expected": "yes", "scores": {"yes": 0.9, "no": 0.1}}
+                )
+                + "\n"
+            )
+            dataset.write_text(original, encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset), "--output", str(dataset)])
+
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(dataset.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":

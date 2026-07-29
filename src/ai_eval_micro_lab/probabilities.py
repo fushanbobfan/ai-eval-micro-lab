@@ -77,7 +77,12 @@ def evaluate_probabilistic_classification(
     cutoffs.sort()
     if not cutoffs:
         raise ValueError("at least one top_k value is required")
-    if gate_top_k not in cutoffs:
+    if (
+        isinstance(gate_top_k, bool)
+        or not isinstance(gate_top_k, int)
+        or gate_top_k <= 0
+        or gate_top_k not in cutoffs
+    ):
         raise ValueError("gate_top_k must be one of the requested top_k values")
 
     _validate_optional_threshold(
@@ -305,6 +310,15 @@ def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
     return records
 
 
+def _paths_alias(source: Path, output: Path) -> bool:
+    if source.resolve() == output.resolve():
+        return True
+    try:
+        return source.samefile(output)
+    except (FileNotFoundError, OSError):
+        return False
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dataset", type=Path)
@@ -328,6 +342,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.output is not None and _paths_alias(args.dataset, args.output):
+            raise ValueError("output must not alias the source dataset")
         report = evaluate_probabilistic_classification(
             _load_jsonl(args.dataset),
             bins=args.bins,
