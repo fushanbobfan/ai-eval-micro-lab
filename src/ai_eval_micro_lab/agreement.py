@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 
@@ -207,3 +211,70 @@ def evaluate_agreement(
             "max_details": max_details,
         },
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def _paths_alias(source: Path, output: Path) -> bool:
+    if source.resolve() == output.resolve():
+        return True
+    try:
+        return source.samefile(output)
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--reference-field", default="reference")
+    parser.add_argument("--rater-field", default="rater")
+    parser.add_argument("--id-field", default="id")
+    parser.add_argument("--min-agreement", type=float)
+    parser.add_argument("--min-kappa", type=float)
+    parser.add_argument("--max-disagreements", type=int)
+    parser.add_argument("--max-details", type=int, default=20)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        if args.output is not None and _paths_alias(args.dataset, args.output):
+            raise ValueError("output must not alias the source dataset")
+        report = evaluate_agreement(
+            _load_jsonl(args.dataset),
+            reference_field=args.reference_field,
+            rater_field=args.rater_field,
+            id_field=args.id_field,
+            min_agreement=args.min_agreement,
+            min_kappa=args.min_kappa,
+            max_disagreements=args.max_disagreements,
+            max_details=args.max_details,
+        )
+        rendered = json.dumps(report, indent=2) + "\n"
+        if args.output is None:
+            print(rendered, end="")
+        else:
+            args.output.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

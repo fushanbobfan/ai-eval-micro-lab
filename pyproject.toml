@@ -11,6 +11,7 @@ license = "MIT"
 
 [project.scripts]
 ai-eval = "ai_eval_micro_lab.cli:main"
+ai-eval-agreement = "ai_eval_micro_lab.agreement:main"
 ai-eval-calibration = "ai_eval_micro_lab.calibration:main"
 ai-eval-classification = "ai_eval_micro_lab.classification:main"
 ai-eval-compare = "ai_eval_micro_lab.comparison:main"

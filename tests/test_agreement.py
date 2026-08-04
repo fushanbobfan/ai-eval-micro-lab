@@ -1,6 +1,12 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.agreement import evaluate_agreement
+import ai_eval_micro_lab
+from ai_eval_micro_lab.agreement import evaluate_agreement, main
 
 
 class AgreementTests(unittest.TestCase):
@@ -17,6 +23,7 @@ class AgreementTests(unittest.TestCase):
     def test_report_contains_deterministic_agreement_metrics(self):
         report = evaluate_agreement(self.records, max_details=1)
 
+        self.assertIs(ai_eval_micro_lab.evaluate_agreement, evaluate_agreement)
         self.assertEqual(report["labels"], ["bird", "cat", "dog"])
         self.assertEqual(
             report["confusion_matrix"],
@@ -93,6 +100,79 @@ class AgreementTests(unittest.TestCase):
             with self.subTest(min_agreement=value):
                 with self.assertRaisesRegex(ValueError, "threshold"):
                     evaluate_agreement(self.records, min_agreement=value)
+
+    def test_cli_writes_a_report_and_returns_one_for_a_failed_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "agreement.jsonl"
+            output = Path(directory) / "report.json"
+            dataset.write_text(
+                "".join(json.dumps(record) + "\n" for record in self.records),
+                encoding="utf-8",
+            )
+
+            exit_code = main(
+                [
+                    str(dataset),
+                    "--min-kappa",
+                    "0.5",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertFalse(report["passed"])
+            self.assertEqual(report["failures"][0]["metric"], "cohen_kappa")
+
+    def test_cli_supports_custom_fields_and_a_passing_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "agreement.jsonl"
+            dataset.write_text(
+                json.dumps({"case": "a", "human": "yes", "judge": "yes"})
+                + "\n",
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--id-field",
+                        "case",
+                        "--reference-field",
+                        "human",
+                        "--rater-field",
+                        "judge",
+                        "--min-agreement",
+                        "1",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_rejects_invalid_json_and_output_aliases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "agreement.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(main([str(dataset)]), 2)
+
+            dataset.write_text(
+                json.dumps({"id": "a", "reference": "yes", "rater": "yes"})
+                + "\n",
+                encoding="utf-8",
+            )
+            original = dataset.read_text(encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    main([str(dataset), "--output", str(dataset)]),
+                    2,
+                )
+            self.assertEqual(dataset.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":
