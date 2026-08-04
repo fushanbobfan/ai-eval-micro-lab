@@ -5,6 +5,7 @@ from typing import Any
 from .metrics import exact_match, evaluate_records, token_f1
 
 __all__ = [
+    "evaluate_agreement",
     "evaluate_calibration",
     "evaluate_classification",
     "evaluate_consistency",
@@ -23,6 +24,10 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
+    if name == "evaluate_agreement":
+        from .agreement import evaluate_agreement
+
+        return evaluate_agreement
     if name == "audit_dataset_overlap":
         from .overlap import audit_dataset_overlap
 

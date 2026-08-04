@@ -1,0 +1,6 @@
+{"id":"case-001","reference":"supported","rater":"supported"}
+{"id":"case-002","reference":"unsupported","rater":"unsupported"}
+{"id":"case-003","reference":"partially_supported","rater":"supported"}
+{"id":"case-004","reference":"supported","rater":"supported"}
+{"id":"case-005","reference":"unsupported","rater":"partially_supported"}
+{"id":"case-006","reference":"partially_supported","rater":"partially_supported"}
