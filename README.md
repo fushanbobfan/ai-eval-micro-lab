@@ -22,6 +22,22 @@ Labels are the sorted union of expected and predicted values, so a class produce
 
 Exit code `0` means the configured accuracy and macro-F1 minimums passed, `1` reports structured threshold shortfalls, and `2` identifies invalid JSON, labels, or configuration. Choose thresholds on separate development data when possible; results on one dataset do not establish future class balance or performance.
 
+## Evaluator agreement audit
+
+Accuracy against one reference label can overstate evaluator reliability when a dominant class makes chance agreement likely. Compare a human or adjudicated reference rater with another human, heuristic, or model-based evaluator using exact categorical labels:
+
+```powershell
+python -m ai_eval_micro_lab.agreement examples/evaluator-agreement.jsonl `
+  --min-agreement 0.60 --min-kappa 0.30 `
+  --max-disagreements 2 --max-details 20
+```
+
+Each JSONL object needs a unique string `id` plus non-empty, case-sensitive `reference` and `rater` labels. The report includes the row-reference, column-rater confusion matrix; observed and chance-expected agreement; Cohen's kappa; per-label usage; sorted disagreement-pair counts; and a bounded list of disagreeing IDs. Source text is not copied into the report. Use the field-name flags when an existing export uses different keys.
+
+Exit code `0` means every configured minimum or maximum passed, `1` reports structured agreement, kappa, or disagreement-count failures, and `2` identifies invalid JSON, duplicate IDs, malformed labels, unsafe output aliasing, or invalid configuration. Kappa is reported as undefined when both raters use the same single label, and a configured kappa gate then fails explicitly instead of treating perfect raw agreement as meaningful chance-corrected agreement.
+
+Agreement is not correctness: two raters can consistently share the same error, and label prevalence can make kappa unstable on small or highly imbalanced samples. Establish the reference process and thresholds independently of the final evaluation set when possible. IDs can still be sensitive, so use non-identifying case keys in artifacts intended for CI or publication.
+
 ## Probabilistic classification evaluation
 
 Hard labels hide whether the model assigned sensible probability mass to alternatives. Evaluate a complete multiclass probability distribution on every record:
