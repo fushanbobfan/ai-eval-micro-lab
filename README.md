@@ -22,6 +22,23 @@ Labels are the sorted union of expected and predicted values, so a class produce
 
 Exit code `0` means the configured accuracy and macro-F1 minimums passed, `1` reports structured threshold shortfalls, and `2` identifies invalid JSON, labels, or configuration. Choose thresholds on separate development data when possible; results on one dataset do not establish future class balance or performance.
 
+## Label distribution drift audit
+
+Class prevalence can change even when two evaluation exports use the same label vocabulary. Compare a reference dataset with a candidate dataset before treating their aggregate scores as directly comparable:
+
+```powershell
+python -m ai_eval_micro_lab.distribution `
+  examples/label-drift-reference.jsonl `
+  examples/label-drift-candidate.jsonl `
+  --max-total-variation 0.35 `
+  --max-js-divergence 0.15 `
+  --max-label-delta 0.35
+```
+
+Each JSONL object needs a non-empty, case-sensitive string `label`; use `--label-field` for another schema. The report gives reference and candidate counts, labels seen on only one side, total variation distance, Jensen-Shannon divergence in bits, the largest absolute prevalence change, and a bounded list of label shifts sorted by magnitude. Total variation, Jensen-Shannon divergence, and absolute prevalence deltas all range from `0` to `1`, where `0` means the observed label proportions match.
+
+Exit code `0` means every configured maximum passed, `1` reports structured drift failures, and `2` identifies invalid JSON, empty datasets, malformed labels, unsafe output aliasing, or invalid configuration. This command measures marginal label prevalence only. It does not identify covariate or concept drift, explain why a distribution changed, show whether annotations are correct, or establish that model quality changed. Small samples can also make prevalence shifts unstable; choose gates from the intended sampling process rather than tuning them on the final comparison.
+
 ## Evaluator agreement audit
 
 Accuracy against one reference label can overstate evaluator reliability when a dominant class makes chance agreement likely. Compare a human or adjudicated reference rater with another human, heuristic, or model-based evaluator using exact categorical labels:
