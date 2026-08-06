@@ -55,6 +55,22 @@ Exit code `0` means every configured minimum or maximum passed, `1` reports stru
 
 Agreement is not correctness: two raters can consistently share the same error, and label prevalence can make kappa unstable on small or highly imbalanced samples. Establish the reference process and thresholds independently of the final evaluation set when possible. IDs can still be sensitive, so use non-identifying case keys in artifacts intended for CI or publication.
 
+## Pairwise preference audit
+
+Summarize blinded or otherwise controlled baseline-versus-candidate judgments without discarding ties:
+
+```powershell
+python -m ai_eval_micro_lab.pairwise examples/pairwise-preferences.jsonl `
+  --min-candidate-win-rate 0.70 `
+  --max-tie-rate 0.20
+```
+
+Each JSONL object needs a unique string `id` and a `winner` equal to `baseline`, `candidate`, or `tie`. The report gives outcome counts, tie rate, candidate and baseline win rates among decisive comparisons, the candidate share and preference margin across all comparisons, and a Wilson confidence interval for the decisive candidate win rate. A bounded detail list contains only IDs and non-candidate outcomes. Use field-name flags for an existing export.
+
+Exit code `0` means the configured minimum win rate, minimum Wilson lower bound, and maximum tie rate passed; `1` reports structured gate failures; and `2` identifies invalid JSON, duplicate IDs, malformed outcomes, unsafe output aliasing, or invalid configuration. An all-tie dataset keeps decisive rates explicitly undefined, and any configured decisive-rate gate fails rather than inventing a score.
+
+Pairwise preference is not correctness or practical significance. Results depend on the judge, rubric, presentation order, tie policy, sampling process, and independence of comparisons. The Wilson interval describes binomial sampling uncertainty for the supplied decisive outcomes only; it does not correct judge bias, repeated prompts, multiple comparisons, or selection on the same evaluation set. Keep IDs non-identifying in reports intended for sharing.
+
 ## Probabilistic classification evaluation
 
 Hard labels hide whether the model assigned sensible probability mass to alternatives. Evaluate a complete multiclass probability distribution on every record:
