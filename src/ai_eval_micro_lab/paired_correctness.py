@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from statistics import NormalDist
 from typing import Any
 
@@ -252,3 +256,73 @@ def evaluate_paired_correctness(
             "max_details": max_details,
         },
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def _paths_alias(source: Path, output: Path) -> bool:
+    if source.resolve() == output.resolve():
+        return True
+    try:
+        return source.samefile(output)
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--id-field", default="id")
+    parser.add_argument("--expected-field", default="expected")
+    parser.add_argument("--baseline-field", default="baseline")
+    parser.add_argument("--candidate-field", default="candidate")
+    parser.add_argument("--confidence", type=float, default=0.95)
+    parser.add_argument("--min-accuracy-difference", type=float)
+    parser.add_argument("--max-regressions", type=int)
+    parser.add_argument("--max-exact-p-value", type=float)
+    parser.add_argument("--max-details", type=int, default=20)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        if args.output is not None and _paths_alias(args.dataset, args.output):
+            raise ValueError("output must not alias the source dataset")
+        report = evaluate_paired_correctness(
+            _load_jsonl(args.dataset),
+            id_field=args.id_field,
+            expected_field=args.expected_field,
+            baseline_field=args.baseline_field,
+            candidate_field=args.candidate_field,
+            confidence=args.confidence,
+            min_accuracy_difference=args.min_accuracy_difference,
+            max_regressions=args.max_regressions,
+            max_exact_p_value=args.max_exact_p_value,
+            max_details=args.max_details,
+        )
+        rendered = json.dumps(report, indent=2) + "\n"
+        if args.output is None:
+            print(rendered, end="")
+        else:
+            args.output.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

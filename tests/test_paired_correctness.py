@@ -1,7 +1,12 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import ai_eval_micro_lab
-from ai_eval_micro_lab.paired_correctness import evaluate_paired_correctness
+from ai_eval_micro_lab.paired_correctness import evaluate_paired_correctness, main
 
 
 class PairedCorrectnessTests(unittest.TestCase):
@@ -145,6 +150,57 @@ class PairedCorrectnessTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(ValueError, "duplicate"):
             evaluate_paired_correctness(duplicate)
+
+    def test_cli_writes_report_and_uses_exit_codes(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            dataset = Path(temporary_directory) / "pairs.jsonl"
+            output = Path(temporary_directory) / "report.json"
+            dataset.write_text(
+                "\n".join(json.dumps(record) for record in self.records) + "\n",
+                encoding="utf-8",
+            )
+
+            exit_code = main(
+                [
+                    str(dataset),
+                    "--min-accuracy-difference",
+                    "0.1",
+                    "--max-regressions",
+                    "1",
+                    "--output",
+                    str(output),
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertAlmostEqual(
+                json.loads(output.read_text(encoding="utf-8"))["metrics"][
+                    "accuracy_difference"
+                ],
+                0.2,
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main([str(dataset), "--max-regressions", "0"]), 1
+                )
+
+    def test_cli_rejects_invalid_json_and_output_alias(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            dataset = Path(temporary_directory) / "pairs.jsonl"
+            dataset.write_text("not json\n", encoding="utf-8")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(main([str(dataset)]), 2)
+            self.assertIn("invalid JSON", stderr.getvalue())
+
+            dataset.write_text(
+                json.dumps(self.records[0]) + "\n", encoding="utf-8"
+            )
+            original = dataset.read_text(encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    main([str(dataset), "--output", str(dataset)]), 2
+                )
+            self.assertEqual(dataset.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":
