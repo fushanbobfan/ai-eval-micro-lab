@@ -63,6 +63,22 @@ class PairedCorrectnessTests(unittest.TestCase):
         self.assertEqual(interval["method"], "wilson")
         self.assertEqual(interval["upper"], 1.0)
 
+    def test_exact_mcnemar_value_handles_large_discordant_sets(self):
+        records = [
+            {
+                "id": f"case-{index}",
+                "expected": "right",
+                "baseline": "wrong",
+                "candidate": "right",
+            }
+            for index in range(2000)
+        ]
+
+        report = evaluate_paired_correctness(records)
+
+        self.assertEqual(report["metrics"]["discordant_count"], 2000)
+        self.assertEqual(report["metrics"]["mcnemar_exact_p_value"], 0.0)
+
     def test_p_value_gate_requires_candidate_direction(self):
         records = [
             {
