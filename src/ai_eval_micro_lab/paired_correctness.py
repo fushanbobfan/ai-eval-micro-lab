@@ -7,6 +7,7 @@ import json
 import math
 import sys
 from collections.abc import Mapping, Sequence
+from fractions import Fraction
 from pathlib import Path
 from statistics import NormalDist
 from typing import Any
@@ -79,7 +80,10 @@ def _mcnemar_exact_p_value(baseline_only: int, candidate_only: int) -> float:
         math.comb(discordant_count, count)
         for count in range(smaller_count + 1)
     )
-    return min(1.0, 2.0 * tail_numerator / (1 << discordant_count))
+    return min(
+        1.0,
+        float(Fraction(2 * tail_numerator, 1 << discordant_count)),
+    )
 
 
 def evaluate_paired_correctness(
@@ -117,7 +121,11 @@ def evaluate_paired_correctness(
         or not 0.0 < confidence < 1.0
     ):
         raise ValueError("confidence must be strictly between 0 and 1")
-    if isinstance(max_details, bool) or not isinstance(max_details, int) or max_details < 0:
+    if (
+        isinstance(max_details, bool)
+        or not isinstance(max_details, int)
+        or max_details < 0
+    ):
         raise ValueError("max_details must be a non-negative integer")
 
     thresholds = {
