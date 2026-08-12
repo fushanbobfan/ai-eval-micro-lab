@@ -13,6 +13,7 @@ __all__ = [
     "audit_dataset_overlap",
     "evaluate_gate",
     "evaluate_multilabel",
+    "evaluate_paired_correctness",
     "evaluate_pairwise_preferences",
     "evaluate_probabilistic_classification",
     "evaluate_regression_gate",
@@ -58,6 +59,10 @@ def __getattr__(name: str) -> Any:
         from .multilabel import evaluate_multilabel
 
         return evaluate_multilabel
+    if name == "evaluate_paired_correctness":
+        from .paired_correctness import evaluate_paired_correctness
+
+        return evaluate_paired_correctness
     if name == "evaluate_pairwise_preferences":
         from .pairwise import evaluate_pairwise_preferences
 

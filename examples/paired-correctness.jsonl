@@ -1,0 +1,12 @@
+{"id":"case-01","expected":"Paris","baseline":"Lyon","candidate":"Paris"}
+{"id":"case-02","expected":"4","baseline":"5","candidate":"4"}
+{"id":"case-03","expected":"Mercury","baseline":"Venus","candidate":"Mercury"}
+{"id":"case-04","expected":"Pacific","baseline":"Atlantic","candidate":"Pacific"}
+{"id":"case-05","expected":"yes","baseline":"no","candidate":"yes"}
+{"id":"case-06","expected":"blue whale","baseline":"orca","candidate":"blue-whale"}
+{"id":"case-07","expected":"Tokyo","baseline":"Kyoto","candidate":"Tokyo"}
+{"id":"case-08","expected":"oxygen","baseline":"nitrogen","candidate":"oxygen"}
+{"id":"case-09","expected":"Saturn","baseline":"Saturn","candidate":"Jupiter"}
+{"id":"case-10","expected":"Nile","baseline":"Nile","candidate":"Nile"}
+{"id":"case-11","expected":"Ada Lovelace","baseline":"Ada Lovelace","candidate":"ada-lovelace"}
+{"id":"case-12","expected":"Mars","baseline":"Venus","candidate":"Jupiter"}

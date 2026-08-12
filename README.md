@@ -71,6 +71,24 @@ Exit code `0` means the configured minimum win rate, minimum Wilson lower bound,
 
 Pairwise preference is not correctness or practical significance. Results depend on the judge, rubric, presentation order, tie policy, sampling process, and independence of comparisons. The Wilson interval describes binomial sampling uncertainty for the supplied decisive outcomes only; it does not correct judge bias, repeated prompts, multiple comparisons, or selection on the same evaluation set. Keep IDs non-identifying in reports intended for sharing.
 
+## Paired correctness comparison
+
+When baseline and candidate outputs share the same reference answers, compare their correctness transitions directly instead of treating two aggregate accuracies as independent:
+
+```powershell
+python -m ai_eval_micro_lab.paired_correctness `
+  examples/paired-correctness.jsonl `
+  --min-accuracy-difference 0.50 `
+  --max-regressions 1 `
+  --max-exact-p-value 0.05
+```
+
+Each JSONL object needs a unique string `id` and string `expected`, `baseline`, and `candidate` fields. Correctness uses the repository's normalized exact match. The report separates both-correct, both-incorrect, baseline-only-correct regressions, and candidate-only-correct improvements; reports each system's accuracy and their paired difference; and summarizes the discordant cases with a Wilson interval plus the two-sided exact McNemar binomial p-value. Bounded details contain IDs and transition names only, not answer text. Field-name flags support existing export schemas.
+
+Exit code `0` means every configured accuracy-difference, regression-count, and exact-p-value gate passed; `1` reports structured gate failures; and `2` identifies invalid JSON, duplicate IDs, malformed fields, unsafe output aliasing, or invalid configuration. The p-value gate is direction-aware: a candidate with no net advantage among discordant cases cannot pass merely because a statistically detectable change favors the baseline.
+
+The exact test addresses only the null model that candidate-only and baseline-only correctness are equally likely among independent discordant cases. It does not measure practical importance, repair incorrect references, account for repeated or clustered cases, or correct for trying multiple datasets, metrics, thresholds, or model variants. Select gates before the final comparison and report the accuracy difference and regression count alongside the p-value.
+
 ## Probabilistic classification evaluation
 
 Hard labels hide whether the model assigned sensible probability mass to alternatives. Evaluate a complete multiclass probability distribution on every record:
