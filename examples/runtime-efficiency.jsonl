@@ -1,0 +1,6 @@
+{"id":"request-001","latency_ms":140.0,"input_tokens":100,"output_tokens":30,"success":true}
+{"id":"request-002","latency_ms":220.0,"input_tokens":120,"output_tokens":25,"success":true}
+{"id":"request-003","latency_ms":180.0,"input_tokens":110,"output_tokens":20,"success":true}
+{"id":"request-004","latency_ms":600.0,"input_tokens":150,"output_tokens":0,"success":false}
+{"id":"request-005","latency_ms":160.0,"input_tokens":90,"output_tokens":15,"success":true}
+{"id":"request-006","latency_ms":260.0,"input_tokens":130,"output_tokens":35,"success":true}

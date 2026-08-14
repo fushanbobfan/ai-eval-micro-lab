@@ -18,6 +18,7 @@ __all__ = [
     "evaluate_probabilistic_classification",
     "evaluate_regression_gate",
     "evaluate_retrieval",
+    "audit_runtime",
     "evaluate_selective_prediction",
     "evaluate_slices",
     "exact_match",
@@ -79,6 +80,10 @@ def __getattr__(name: str) -> Any:
         from .retrieval import evaluate_retrieval
 
         return evaluate_retrieval
+    if name == "audit_runtime":
+        from .runtime import audit_runtime
+
+        return audit_runtime
     if name == "evaluate_selective_prediction":
         from .selective import evaluate_selective_prediction
 

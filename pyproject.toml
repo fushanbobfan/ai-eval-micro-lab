@@ -25,6 +25,7 @@ ai-eval-pairwise = "ai_eval_micro_lab.pairwise:main"
 ai-eval-probabilities = "ai_eval_micro_lab.probabilities:main"
 ai-eval-regression-gate = "ai_eval_micro_lab.regression_gate:main"
 ai-eval-retrieval = "ai_eval_micro_lab.retrieval:main"
+ai-eval-runtime = "ai_eval_micro_lab.runtime:main"
 ai-eval-selective = "ai_eval_micro_lab.selective:main"
 ai-eval-slices = "ai_eval_micro_lab.slices:main"
 

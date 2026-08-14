@@ -89,6 +89,22 @@ Exit code `0` means every configured accuracy-difference, regression-count, and 
 
 The exact test addresses only the null model that candidate-only and baseline-only correctness are equally likely among independent discordant cases. It does not measure practical importance, repair incorrect references, account for repeated or clustered cases, or correct for trying multiple datasets, metrics, thresholds, or model variants. Select gates before the final comparison and report the accuracy difference and regression count alongside the p-value.
 
+## Inference runtime audit
+
+Quality metrics do not show whether an evaluated model run met its operational budget. Audit recorded attempts with deterministic success-rate, latency, and token-use summaries:
+
+```powershell
+python -m ai_eval_micro_lab.runtime examples/runtime-efficiency.jsonl `
+  --min-success-rate 0.80 `
+  --max-p95-latency-ms 650 `
+  --max-mean-total-tokens 150 `
+  --max-failures 1
+```
+
+Each JSONL object needs a unique string `id`, a finite non-negative `latency_ms`, non-negative integer `input_tokens` and `output_tokens`, and a Boolean `success`. The report includes attempt counts, success rate, mean and nearest-rank p50/p95/maximum latency, aggregate and per-attempt token use, bounded slow-attempt summaries, and bounded failure IDs. Use the field-name flags for an existing instrumentation schema. The input file is size-bounded, and output aliasing is rejected.
+
+Exit code `0` means every configured budget passed, `1` reports structured threshold failures, and `2` identifies invalid JSON, duplicate IDs, malformed measurements, an oversized input, unsafe output aliasing, or invalid configuration. Latency includes every recorded attempt, including failures. These metrics depend on the supplied instrumentation, hardware, concurrency, cache state, model version, and workload mix. They do not measure answer quality, estimate provider cost, establish capacity, or predict production reliability; compare like-for-like runs and evaluate quality separately.
+
 ## Probabilistic classification evaluation
 
 Hard labels hide whether the model assigned sensible probability mass to alternatives. Evaluate a complete multiclass probability distribution on every record:
