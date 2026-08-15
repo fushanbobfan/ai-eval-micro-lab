@@ -71,6 +71,25 @@ Exit code `0` means the configured minimum win rate, minimum Wilson lower bound,
 
 Pairwise preference is not correctness or practical significance. Results depend on the judge, rubric, presentation order, tie policy, sampling process, and independence of comparisons. The Wilson interval describes binomial sampling uncertainty for the supplied decisive outcomes only; it does not correct judge bias, repeated prompts, multiple comparisons, or selection on the same evaluation set. Keep IDs non-identifying in reports intended for sharing.
 
+## Presentation-order bias audit
+
+A pairwise win rate can hide a judge that favors whichever answer appears first or second. Repeat each comparison with the candidate order reversed, then audit whether the selected candidate remains stable:
+
+```powershell
+python -m ai_eval_micro_lab.position_bias `
+  examples/presentation-order-bias.jsonl `
+  --min-complete-pairs 4 `
+  --min-robust-preference-rate 0.50 `
+  --max-position-flip-rate 0.25 `
+  --max-incomplete-pairs 0
+```
+
+Each JSONL object needs a non-empty string `pair_id`, distinct non-empty `first` and `second` candidate identifiers, and a `winner` equal to `first`, `second`, or `tie`. A complete pair contains exactly two presentations with the candidates reversed. The report distinguishes stable candidate preferences, stable ties, first-position flips, second-position flips, one-sided tie instability, and incomplete pairs. Bounded details contain only pair IDs and classifications, not candidate identifiers or answer content. Field-name flags support existing exports, and the input size is bounded.
+
+Exit code `0` means every configured count or rate gate passed, `1` reports structured failures, and `2` identifies invalid JSON, duplicate or non-reversed presentations, malformed fields, an oversized input, unsafe output aliasing, or invalid configuration. Rates use complete pairs as their denominator and stay undefined when no complete pair exists; configured rate gates then fail explicitly.
+
+This audit detects order sensitivity only in the supplied reversed presentations. It does not determine which answer is correct, validate the judge or rubric, isolate other prompt-position effects, or guarantee that the measured rates generalize. Candidate identifiers and pair IDs can still be sensitive, repeated cases may be dependent, and thresholds selected on the same final sample can overstate stability.
+
 ## Paired correctness comparison
 
 When baseline and candidate outputs share the same reference answers, compare their correctness transitions directly instead of treating two aggregate accuracies as independent:
