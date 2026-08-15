@@ -1,0 +1,8 @@
+{"pair_id":"case-01","first":"baseline","second":"candidate","winner":"second"}
+{"pair_id":"case-01","first":"candidate","second":"baseline","winner":"first"}
+{"pair_id":"case-02","first":"baseline","second":"candidate","winner":"first"}
+{"pair_id":"case-02","first":"candidate","second":"baseline","winner":"second"}
+{"pair_id":"case-03","first":"baseline","second":"candidate","winner":"first"}
+{"pair_id":"case-03","first":"candidate","second":"baseline","winner":"first"}
+{"pair_id":"case-04","first":"baseline","second":"candidate","winner":"tie"}
+{"pair_id":"case-04","first":"candidate","second":"baseline","winner":"tie"}

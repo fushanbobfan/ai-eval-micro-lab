@@ -11,6 +11,7 @@ __all__ = [
     "evaluate_consistency",
     "audit_label_distribution",
     "audit_dataset_overlap",
+    "audit_position_bias",
     "evaluate_gate",
     "evaluate_multilabel",
     "evaluate_paired_correctness",
@@ -40,6 +41,10 @@ def __getattr__(name: str) -> Any:
         from .distribution import audit_label_distribution
 
         return audit_label_distribution
+    if name == "audit_position_bias":
+        from .position_bias import audit_position_bias
+
+        return audit_position_bias
     if name == "evaluate_calibration":
         from .calibration import evaluate_calibration
 
