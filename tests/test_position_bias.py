@@ -1,6 +1,12 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.position_bias import audit_position_bias
+import ai_eval_micro_lab
+from ai_eval_micro_lab.position_bias import audit_position_bias, main
 
 
 class PositionBiasAuditTests(unittest.TestCase):
@@ -23,6 +29,7 @@ class PositionBiasAuditTests(unittest.TestCase):
         report = audit_position_bias(self.records, max_details=1)
         metrics = report["metrics"]
 
+        self.assertIs(ai_eval_micro_lab.audit_position_bias, audit_position_bias)
         self.assertEqual(metrics["record_count"], 11)
         self.assertEqual(metrics["pair_count"], 6)
         self.assertEqual(metrics["complete_pairs"], 5)
@@ -117,6 +124,73 @@ class PositionBiasAuditTests(unittest.TestCase):
             with self.subTest(count=value):
                 with self.assertRaisesRegex(ValueError, "non-negative integer"):
                     audit_position_bias(self.records, min_complete_pairs=value)
+
+    def test_cli_supports_custom_fields_and_writes_a_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "presentations.jsonl"
+            output = root / "report.json"
+            dataset.write_text(
+                "".join(
+                    json.dumps(
+                        {
+                            "comparison": record["pair_id"],
+                            "left": record["first"],
+                            "right": record["second"],
+                            "choice": record["winner"],
+                        }
+                    )
+                    + "\n"
+                    for record in self.records
+                ),
+                encoding="utf-8",
+            )
+
+            exit_code = main(
+                [
+                    str(dataset),
+                    "--pair-field",
+                    "comparison",
+                    "--first-field",
+                    "left",
+                    "--second-field",
+                    "right",
+                    "--winner-field",
+                    "choice",
+                    "--min-complete-pairs",
+                    "5",
+                    "--max-incomplete-pairs",
+                    "1",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertTrue(report["passed"])
+            self.assertEqual(report["metrics"]["complete_pairs"], 5)
+
+    def test_cli_returns_one_for_gate_failure_and_two_for_bad_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "presentations.jsonl"
+            dataset.write_text(
+                "".join(json.dumps(record) + "\n" for record in self.records),
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main([str(dataset), "--max-position-flip-rate", "0.1"]),
+                    1,
+                )
+
+            original = dataset.read_text(encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    main([str(dataset), "--output", str(dataset)]),
+                    2,
+                )
+            self.assertEqual(dataset.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":

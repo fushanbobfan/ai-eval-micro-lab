@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 
 _WINNERS = ("first", "second", "tie")
+_MAX_INPUT_BYTES = 8 * 1024 * 1024
 
 
 def _validate_rate(name: str, value: float | None) -> float | None:
@@ -266,3 +271,77 @@ def audit_position_bias(
         ),
         "settings": {**field_names, "max_details": max_details},
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    if path.stat().st_size > _MAX_INPUT_BYTES:
+        raise ValueError(f"dataset exceeds {_MAX_INPUT_BYTES} bytes")
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def _paths_alias(source: Path, output: Path) -> bool:
+    if source.resolve() == output.resolve():
+        return True
+    try:
+        return source.samefile(output)
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--pair-field", default="pair_id")
+    parser.add_argument("--first-field", default="first")
+    parser.add_argument("--second-field", default="second")
+    parser.add_argument("--winner-field", default="winner")
+    parser.add_argument("--min-complete-pairs", type=int)
+    parser.add_argument("--min-robust-preference-rate", type=float)
+    parser.add_argument("--max-position-flip-rate", type=float)
+    parser.add_argument("--max-tie-instability-rate", type=float)
+    parser.add_argument("--max-incomplete-pairs", type=int)
+    parser.add_argument("--max-details", type=int, default=20)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        if args.output is not None and _paths_alias(args.dataset, args.output):
+            raise ValueError("output must not alias the source dataset")
+        report = audit_position_bias(
+            _load_jsonl(args.dataset),
+            pair_field=args.pair_field,
+            first_field=args.first_field,
+            second_field=args.second_field,
+            winner_field=args.winner_field,
+            min_complete_pairs=args.min_complete_pairs,
+            min_robust_preference_rate=args.min_robust_preference_rate,
+            max_position_flip_rate=args.max_position_flip_rate,
+            max_tie_instability_rate=args.max_tie_instability_rate,
+            max_incomplete_pairs=args.max_incomplete_pairs,
+            max_details=args.max_details,
+        )
+        rendered = json.dumps(report, indent=2) + "\n"
+        if args.output is None:
+            print(rendered, end="")
+        else:
+            args.output.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
