@@ -1,0 +1,8 @@
+{"expected":"Paris","predicted":"Paris","group":"direct"}
+{"expected":"4","predicted":"4","group":"direct"}
+{"expected":"blue whale","predicted":"Blue whale","group":"direct"}
+{"expected":"Saturn","predicted":"Jupiter","group":"direct"}
+{"expected":"mitochondria","predicted":"mitochondria","group":"contextual"}
+{"expected":"evaporation","predicted":"condensation","group":"contextual"}
+{"expected":"plate tectonics","predicted":"plate tectonics","group":"contextual"}
+{"expected":"photosynthesis","predicted":"respiration","group":"contextual"}

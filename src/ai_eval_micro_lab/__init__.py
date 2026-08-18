@@ -6,6 +6,7 @@ from .metrics import exact_match, evaluate_records, token_f1
 
 __all__ = [
     "evaluate_agreement",
+    "audit_group_disparity",
     "evaluate_calibration",
     "evaluate_classification",
     "evaluate_consistency",
@@ -33,6 +34,10 @@ def __getattr__(name: str) -> Any:
         from .agreement import evaluate_agreement
 
         return evaluate_agreement
+    if name == "audit_group_disparity":
+        from .disparity import audit_group_disparity
+
+        return audit_group_disparity
     if name == "audit_dataset_overlap":
         from .overlap import audit_dataset_overlap
 
