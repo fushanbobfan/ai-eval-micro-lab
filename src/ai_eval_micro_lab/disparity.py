@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from statistics import NormalDist
 from typing import Any
 
 from .metrics import exact_match
+
+MAX_INPUT_BYTES = 10 * 1024 * 1024
 
 
 def _validate_rate(name: str, value: float | None) -> float | None:
@@ -191,4 +197,76 @@ def audit_group_disparity(
             "accuracy_gap": max_accuracy_gap,
         },
         "failures": failures,
+        "settings": {
+            **field_names,
+            "confidence": float(confidence),
+        },
     }
+
+
+def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+    if path.stat().st_size > MAX_INPUT_BYTES:
+        raise ValueError(f"dataset exceeds {MAX_INPUT_BYTES} bytes")
+    records = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"line {line_number} must contain a JSON object")
+            records.append(record)
+    return records
+
+
+def _paths_alias(source: Path, output: Path) -> bool:
+    if source.resolve() == output.resolve():
+        return True
+    try:
+        return source.samefile(output)
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--group-field", default="group")
+    parser.add_argument("--expected-field", default="expected")
+    parser.add_argument("--predicted-field", default="predicted")
+    parser.add_argument("--confidence", type=float, default=0.95)
+    parser.add_argument("--min-group-count", type=int, default=1)
+    parser.add_argument("--min-worst-group-accuracy", type=float)
+    parser.add_argument("--max-accuracy-gap", type=float)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        if args.output is not None and _paths_alias(args.dataset, args.output):
+            raise ValueError("output must not alias the source dataset")
+        report = audit_group_disparity(
+            _load_jsonl(args.dataset),
+            group_field=args.group_field,
+            expected_field=args.expected_field,
+            predicted_field=args.predicted_field,
+            confidence=args.confidence,
+            min_group_count=args.min_group_count,
+            min_worst_group_accuracy=args.min_worst_group_accuracy,
+            max_accuracy_gap=args.max_accuracy_gap,
+        )
+        rendered = json.dumps(report, indent=2) + "\n"
+        if args.output is None:
+            print(rendered, end="")
+        else:
+            args.output.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

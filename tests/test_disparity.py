@@ -1,6 +1,11 @@
+import contextlib
+import io
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.disparity import audit_group_disparity
+from ai_eval_micro_lab.disparity import MAX_INPUT_BYTES, audit_group_disparity, main
 
 
 class GroupDisparityTests(unittest.TestCase):
@@ -76,6 +81,68 @@ class GroupDisparityTests(unittest.TestCase):
             with self.subTest(threshold=threshold_name):
                 with self.assertRaisesRegex(ValueError, threshold_name):
                     audit_group_disparity(valid, **{threshold_name: 1.1})
+
+    def test_cli_writes_a_report_and_returns_one_for_failed_gates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "groups.jsonl"
+            output = Path(directory) / "report.json"
+            dataset.write_text(
+                "".join(
+                    json.dumps(record) + "\n"
+                    for record in (
+                        {"answer": "a", "response": "a", "cohort": "x"},
+                        {"answer": "b", "response": "x", "cohort": "y"},
+                    )
+                ),
+                encoding="utf-8",
+            )
+
+            exit_code = main(
+                [
+                    str(dataset),
+                    "--group-field",
+                    "cohort",
+                    "--expected-field",
+                    "answer",
+                    "--predicted-field",
+                    "response",
+                    "--min-worst-group-accuracy",
+                    "0.5",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertFalse(report["passed"])
+            self.assertEqual(report["settings"]["group_field"], "cohort")
+
+    def test_cli_rejects_an_oversized_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "large.jsonl"
+            dataset.write_bytes(b" " * (MAX_INPUT_BYTES + 1))
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset)])
+
+            self.assertEqual(exit_code, 2)
+
+    def test_cli_refuses_to_overwrite_the_source_dataset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "groups.jsonl"
+            dataset.write_text(
+                json.dumps({"expected": "a", "predicted": "a", "group": "g"})
+                + "\n",
+                encoding="utf-8",
+            )
+            original = dataset.read_text(encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset), "--output", str(dataset)])
+
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(dataset.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":
