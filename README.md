@@ -205,6 +205,21 @@ python -m ai_eval_micro_lab.slices examples/slice-evaluation.jsonl --slice-by ca
 
 Use `--min-count` to omit undersized slices from the detailed list. The report keeps their slice and record counts visible, and the overall metrics always include every validated record. Invalid JSON, missing fields, non-string labels, and non-positive thresholds return exit code `2`.
 
+## Group performance disparity audit
+
+Per-slice averages are useful for exploration, but a release check often needs one explicit statement about the weakest group and the largest observed gap. The disparity command evaluates normalized exact-match accuracy for every named group and attaches a Wilson interval to each finite-sample rate:
+
+```powershell
+python -m ai_eval_micro_lab.disparity examples/group-disparity.jsonl `
+  --min-group-count 2 `
+  --min-worst-group-accuracy 0.50 `
+  --max-accuracy-gap 0.35
+```
+
+The report keeps every group in deterministic order, identifies tied best and worst groups, and reports overall accuracy, minimum group size, worst-group accuracy, and the best-minus-worst accuracy gap. Exit code `0` means every configured gate passed, `1` reports structured sample-size or performance failures, and `2` identifies malformed data, invalid thresholds, oversized input, or unsafe output aliasing. Custom field names support existing evaluation exports.
+
+These are descriptive exact-match differences in the supplied finite dataset, not a fairness certification or a causal analysis. Group definitions may be incomplete or sensitive, Wilson intervals cover binomial sampling uncertainty only, repeated cases may be dependent, and a small or unrepresentative evaluation set can hide important harms. Choose group definitions and gates before reviewing final results, and investigate context rather than treating a passing gap as proof of equitable behavior.
+
 ## CI quality gate
 
 Turn the standard evaluation metrics into a deterministic build check by setting one or both minimum scores:

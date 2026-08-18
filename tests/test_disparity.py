@@ -5,10 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import ai_eval_micro_lab
 from ai_eval_micro_lab.disparity import MAX_INPUT_BYTES, audit_group_disparity, main
 
 
 class GroupDisparityTests(unittest.TestCase):
+    def test_public_api_exposes_group_disparity_audit(self):
+        self.assertIs(ai_eval_micro_lab.audit_group_disparity, audit_group_disparity)
+
     def test_reports_sorted_group_accuracy_and_gap(self):
         records = [
             {"expected": "yes", "predicted": "yes", "group": "alpha"},
