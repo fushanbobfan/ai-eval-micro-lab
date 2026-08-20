@@ -240,19 +240,31 @@ def audit_ranking_drift(
     }
 
 
-def _load_jsonl(path: Path) -> list[Mapping[str, Any]]:
+def _load_jsonl(
+    path: Path, *, max_file_bytes: int = 10 * 1024 * 1024
+) -> list[Mapping[str, Any]]:
+    if (
+        isinstance(max_file_bytes, bool)
+        or not isinstance(max_file_bytes, int)
+        or max_file_bytes <= 0
+    ):
+        raise ValueError("max_file_bytes must be a positive integer")
+    with path.open("rb") as handle:
+        data = handle.read(max_file_bytes + 1)
+    if len(data) > max_file_bytes:
+        raise ValueError(f"dataset exceeds max_file_bytes ({max_file_bytes})")
+
     records = []
-    with path.open(encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, start=1):
-            if not line.strip():
-                continue
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError as error:
-                raise ValueError(f"invalid JSON on line {line_number}") from error
-            if not isinstance(record, dict):
-                raise ValueError(f"line {line_number} must contain a JSON object")
-            records.append(record)
+    for line_number, line in enumerate(data.decode("utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"invalid JSON on line {line_number}") from error
+        if not isinstance(record, dict):
+            raise ValueError(f"line {line_number} must contain a JSON object")
+        records.append(record)
     return records
 
 
@@ -276,6 +288,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--query-field", default="query_id")
     parser.add_argument("--baseline-field", default="baseline")
     parser.add_argument("--candidate-field", default="candidate")
+    parser.add_argument("--max-file-bytes", type=int, default=10 * 1024 * 1024)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
 
@@ -283,7 +296,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.output is not None and _paths_alias(args.dataset, args.output):
             raise ValueError("output must not alias the input dataset")
         report = audit_ranking_drift(
-            _load_jsonl(args.dataset),
+            _load_jsonl(args.dataset, max_file_bytes=args.max_file_bytes),
             cutoffs=args.cutoffs or DEFAULT_CUTOFFS,
             gate_cutoff=args.gate_cutoff,
             min_mean_jaccard=args.min_mean_jaccard,

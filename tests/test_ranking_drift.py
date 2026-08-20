@@ -5,10 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import ai_eval_micro_lab
 from ai_eval_micro_lab.ranking_drift import audit_ranking_drift, main
 
 
 class RankingDriftAuditTests(unittest.TestCase):
+    def test_ranking_drift_api_is_available_from_package(self):
+        self.assertIs(ai_eval_micro_lab.audit_ranking_drift, audit_ranking_drift)
+
     def test_reports_top_k_set_overlap_and_shared_rank_displacement(self):
         report = audit_ranking_drift(
             [
@@ -149,6 +153,16 @@ class RankingDriftAuditTests(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(main([str(dataset)]), 2)
                 self.assertEqual(main([str(dataset), "--output", str(dataset)]), 2)
+
+    def test_cli_bounds_input_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "rankings.jsonl"
+            dataset.write_text("{}\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                exit_code = main([str(dataset), "--max-file-bytes", "2"])
+
+            self.assertEqual(exit_code, 2)
 
 
 if __name__ == "__main__":
