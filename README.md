@@ -171,6 +171,20 @@ Each JSONL object needs a unique string `query_id`, a non-empty list of unique `
 
 Exit code `0` means all minimums passed at `--gate-cutoff`, `1` reports structured metric shortfalls, and `2` identifies invalid JSON, duplicate IDs, empty relevance judgments, or invalid configuration. These metrics assume binary and complete relevance judgments; unjudged documents, position bias, or a small query set can distort offline results and do not establish downstream answer quality.
 
+## Retrieval ranking drift audit
+
+Compare paired baseline and candidate rankings without requiring relevance judgments:
+
+```powershell
+ai-eval-ranking-drift examples/ranking-drift.jsonl `
+  --cutoff 1 --cutoff 2 --gate-cutoff 2 `
+  --min-mean-jaccard 0.70 --max-top-item-change-rate 0.40
+```
+
+Each JSONL object needs a unique `query_id` and ordered, duplicate-free `baseline` and `candidate` document-ID lists. Empty lists are allowed. At every cutoff the report includes mean top-k Jaccard overlap, top-item change rate, and mean absolute rank displacement among shared items. The bounded query details are sorted from least stable to most stable; `--max-file-bytes` limits input before parsing, and `--output` refuses to overwrite or alias the dataset.
+
+Exit code `0` means both gates passed at `--gate-cutoff`, `1` reports structured stability failures, and `2` identifies malformed input or invalid configuration. Ranking stability is not retrieval quality: an unchanged ranking can remain irrelevant, while a changed ranking can improve. Jaccard overlap ignores order within a set, shared-item displacement excludes non-overlapping IDs, and results depend on the query sample and chosen cutoff.
+
 ## Dataset overlap audit
 
 Accidental reuse between training, development, and evaluation exports can make an offline score misleading. Compare two JSONL datasets by stable record ID and text:

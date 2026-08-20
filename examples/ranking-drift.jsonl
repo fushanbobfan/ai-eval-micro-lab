@@ -1,0 +1,3 @@
+{"query_id":"q-login","baseline":["doc-auth","doc-sso","doc-reset"],"candidate":["doc-auth","doc-reset","doc-sso"]}
+{"query_id":"q-billing","baseline":["doc-plans","doc-refunds"],"candidate":["doc-refunds","doc-plans"]}
+{"query_id":"q-api","baseline":["doc-rate-limits","doc-errors"],"candidate":["doc-rate-limits","doc-errors"]}
