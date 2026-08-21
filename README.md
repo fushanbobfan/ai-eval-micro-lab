@@ -185,6 +185,22 @@ Each JSONL object needs a unique `query_id` and ordered, duplicate-free `baselin
 
 Exit code `0` means both gates passed at `--gate-cutoff`, `1` reports structured stability failures, and `2` identifies malformed input or invalid configuration. Ranking stability is not retrieval quality: an unchanged ranking can remain irrelevant, while a changed ranking can improve. Jaccard overlap ignores order within a set, shared-item displacement excludes non-overlapping IDs, and results depend on the query sample and chosen cutoff.
 
+## Evaluator score drift audit
+
+Audit paired numeric scores from a baseline and candidate evaluator configuration:
+
+```powershell
+ai-eval-score-drift examples/score-drift.jsonl `
+  --tolerance 0.15 `
+  --max-abs-mean-shift 0.20 `
+  --max-mean-absolute-change 0.25 `
+  --min-within-tolerance-rate 0.70
+```
+
+Each JSONL object needs a unique `case_id` plus finite `baseline_score` and `candidate_score` numbers. The report includes signed mean shift, mean absolute change, root mean square change, the largest changed case ID, and the rate within `--tolerance`. Bounded ID-and-score details are ordered by absolute change. Field-name flags support alternate exports, `--max-file-bytes` bounds input before parsing, and `--output` refuses to alias the source dataset.
+
+Exit code `0` means every configured gate passed, `1` reports all threshold failures, and `2` identifies invalid input or configuration. Score stability is not evaluator validity or answer quality. Opposing changes can cancel in the signed mean, tolerance is domain-specific, and paired descriptive metrics do not establish why a scoring configuration changed.
+
 ## Dataset overlap audit
 
 Accidental reuse between training, development, and evaluation exports can make an offline score misleading. Compare two JSONL datasets by stable record ID and text:
