@@ -14,6 +14,7 @@ __all__ = [
     "audit_dataset_overlap",
     "audit_position_bias",
     "audit_ranking_drift",
+    "audit_score_drift",
     "evaluate_gate",
     "evaluate_multilabel",
     "evaluate_paired_correctness",
@@ -55,6 +56,10 @@ def __getattr__(name: str) -> Any:
         from .ranking_drift import audit_ranking_drift
 
         return audit_ranking_drift
+    if name == "audit_score_drift":
+        from .score_drift import audit_score_drift
+
+        return audit_score_drift
     if name == "evaluate_calibration":
         from .calibration import evaluate_calibration
 
