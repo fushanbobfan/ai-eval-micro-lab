@@ -6,10 +6,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import ai_eval_micro_lab
 from ai_eval_micro_lab.score_drift import audit_score_drift, main
 
 
 class ScoreDriftAuditTests(unittest.TestCase):
+    def test_score_drift_api_is_available_from_package(self):
+        self.assertIs(ai_eval_micro_lab.audit_score_drift, audit_score_drift)
+
     def test_reports_paired_score_drift_metrics(self):
         report = audit_score_drift(
             [
