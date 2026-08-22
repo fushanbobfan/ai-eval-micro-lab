@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import sys
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 
@@ -275,3 +279,87 @@ def audit_probability_drift(
             "candidate_field": candidate_field,
         },
     }
+
+
+def _load_jsonl(
+    path: Path, *, max_file_bytes: int = 10 * 1024 * 1024
+) -> list[Mapping[str, Any]]:
+    if (
+        isinstance(max_file_bytes, bool)
+        or not isinstance(max_file_bytes, int)
+        or max_file_bytes <= 0
+    ):
+        raise ValueError("max_file_bytes must be a positive integer")
+    with path.open("rb") as handle:
+        data = handle.read(max_file_bytes + 1)
+    if len(data) > max_file_bytes:
+        raise ValueError(f"dataset exceeds max_file_bytes ({max_file_bytes})")
+
+    records = []
+    for line_number, line in enumerate(data.decode("utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"invalid JSON on line {line_number}") from error
+        if not isinstance(record, dict):
+            raise ValueError(f"line {line_number} must contain a JSON object")
+        records.append(record)
+    return records
+
+
+def _paths_alias(source: Path, output: Path) -> bool:
+    if source.resolve() == output.resolve():
+        return True
+    try:
+        return source.samefile(output)
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--max-mean-total-variation", type=float)
+    parser.add_argument("--max-case-total-variation", type=float)
+    parser.add_argument("--max-mean-js-divergence", type=float)
+    parser.add_argument("--max-top-label-change-rate", type=float)
+    parser.add_argument("--probability-tolerance", type=float, default=1e-6)
+    parser.add_argument("--max-details", type=int, default=20)
+    parser.add_argument("--id-field", default="case_id")
+    parser.add_argument("--baseline-field", default="baseline_scores")
+    parser.add_argument("--candidate-field", default="candidate_scores")
+    parser.add_argument("--max-file-bytes", type=int, default=10 * 1024 * 1024)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args(argv)
+
+    try:
+        if args.output is not None and _paths_alias(args.dataset, args.output):
+            raise ValueError("output must not alias the input dataset")
+        report = audit_probability_drift(
+            _load_jsonl(args.dataset, max_file_bytes=args.max_file_bytes),
+            max_mean_total_variation=args.max_mean_total_variation,
+            max_case_total_variation=args.max_case_total_variation,
+            max_mean_js_divergence=args.max_mean_js_divergence,
+            max_top_label_change_rate=args.max_top_label_change_rate,
+            probability_tolerance=args.probability_tolerance,
+            max_details=args.max_details,
+            id_field=args.id_field,
+            baseline_field=args.baseline_field,
+            candidate_field=args.candidate_field,
+        )
+        rendered = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
+        if args.output is None:
+            print(rendered, end="")
+        else:
+            args.output.write_text(rendered, encoding="utf-8")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    return int(not report["passed"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

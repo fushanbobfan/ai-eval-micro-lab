@@ -1,7 +1,13 @@
+import contextlib
+import io
+import json
 import math
+import tempfile
 import unittest
+from pathlib import Path
 
-from ai_eval_micro_lab.probability_drift import audit_probability_drift
+import ai_eval_micro_lab
+from ai_eval_micro_lab.probability_drift import audit_probability_drift, main
 
 
 class ProbabilityDriftTests(unittest.TestCase):
@@ -22,6 +28,7 @@ class ProbabilityDriftTests(unittest.TestCase):
     def test_reports_paired_probability_drift(self):
         report = audit_probability_drift(self.records)
 
+        self.assertIs(ai_eval_micro_lab.audit_probability_drift, audit_probability_drift)
         self.assertTrue(report["passed"])
         self.assertEqual(report["labels"], ["cat", "dog"])
         self.assertAlmostEqual(report["metrics"]["mean_total_variation"], 0.25)
@@ -157,6 +164,65 @@ class ProbabilityDriftTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "repeats case"):
             audit_probability_drift(self.records + [self.records[0]])
+
+    def test_cli_writes_a_report_and_returns_one_for_a_failed_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "probability-drift.jsonl"
+            output = Path(directory) / "report.json"
+            dataset.write_text(
+                "".join(json.dumps(record) + "\n" for record in self.records),
+                encoding="utf-8",
+            )
+
+            exit_code = main(
+                [
+                    str(dataset),
+                    "--max-top-label-change-rate",
+                    "0.25",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(json.loads(output.read_text(encoding="utf-8"))["passed"])
+
+    def test_cli_supports_custom_fields_and_a_passing_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "probability-drift.jsonl"
+            dataset.write_text(
+                json.dumps({"id": "x", "old": {"a": 1}, "new": {"a": 1}})
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with contextlib.redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(
+                    [
+                        str(dataset),
+                        "--id-field",
+                        "id",
+                        "--baseline-field",
+                        "old",
+                        "--candidate-field",
+                        "new",
+                        "--max-mean-total-variation",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(json.loads(stdout.getvalue())["passed"])
+
+    def test_cli_rejects_invalid_json_output_alias_and_oversized_input(self):
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "probability-drift.jsonl"
+            dataset.write_text("{\n", encoding="utf-8")
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(main([str(dataset)]), 2)
+                self.assertEqual(main([str(dataset), "--output", str(dataset)]), 2)
+                self.assertEqual(main([str(dataset), "--max-file-bytes", "1"]), 2)
 
 
 if __name__ == "__main__":

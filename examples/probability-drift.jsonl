@@ -1,0 +1,3 @@
+{"case_id":"ticket-1","baseline_scores":{"billing":0.75,"technical":0.2,"other":0.05},"candidate_scores":{"billing":0.68,"technical":0.26,"other":0.06}}
+{"case_id":"ticket-2","baseline_scores":{"billing":0.25,"technical":0.65,"other":0.1},"candidate_scores":{"billing":0.42,"technical":0.48,"other":0.1}}
+{"case_id":"ticket-3","baseline_scores":{"billing":0.15,"technical":0.2,"other":0.65},"candidate_scores":{"billing":0.18,"technical":0.22,"other":0.6}}
