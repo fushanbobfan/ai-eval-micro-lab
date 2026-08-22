@@ -142,6 +142,25 @@ The report includes top-1 and requested top-k accuracy, natural-log multiclass l
 
 Exit code `0` means every configured minimum and maximum passed, `1` reports structured threshold failures, and `2` identifies invalid JSON, inconsistent labels, malformed probabilities, unsafe output aliasing, or invalid configuration. Brier score here is the sum across classes and ranges from `0` to `2`; it is not divided by the number of classes. Probability quality on one labeled dataset does not establish calibration after class, data, or model drift, and thresholds should be chosen on separate development data.
 
+## Probability distribution drift audit
+
+Hard-label comparisons can miss a model version that keeps the same prediction while moving substantial probability mass between alternatives. Compare paired categorical distributions for the same cases:
+
+```powershell
+python -m ai_eval_micro_lab.probability_drift `
+  examples/probability-drift.jsonl `
+  --max-mean-total-variation 0.20 `
+  --max-case-total-variation 0.30 `
+  --max-mean-js-divergence 0.10 `
+  --max-top-label-change-rate 0.40
+```
+
+Each JSONL object needs a unique string `case_id` plus `baseline_scores` and `candidate_scores` objects. Both distributions must use the same non-empty label set, contain finite probabilities between `0` and `1`, and sum to `1` within the configured tolerance. Every record in the file must use the same label vocabulary. Equal top probabilities are resolved by label order for deterministic results.
+
+The report includes mean and worst-case total variation distance, mean and worst-case Jensen-Shannon divergence in bits, top-label change count and rate, per-label mean probability shifts, and bounded case details sorted by divergence. Field-name flags support existing export schemas, input bytes are bounded, and output aliasing is rejected.
+
+Exit code `0` means every configured maximum passed, `1` reports structured drift failures, and `2` identifies malformed probabilities, inconsistent labels, duplicate IDs, oversized input, unsafe output aliasing, or invalid configuration. This audit measures version-to-version distribution movement only. It does not establish correctness, calibration, fairness, robustness, or the cause of a change; a stable but wrong model can pass, and a justified improvement can fail a strict drift gate. Case IDs and labels can still be sensitive, so use non-identifying keys in shared reports and choose thresholds before inspecting the final comparison.
+
 ## Multi-label classification evaluation
 
 When one record can have several correct labels, evaluate exact JSON arrays instead of flattening the task into a single class:
