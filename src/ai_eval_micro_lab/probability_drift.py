@@ -51,7 +51,7 @@ def _probabilities(
             )
         scores[label] = float(score)
 
-    if abs(sum(scores.values()) - 1.0) > probability_tolerance:
+    if abs(math.fsum(scores.values()) - 1.0) > probability_tolerance:
         raise ValueError(
             f"record {record_index} field {field!r} probabilities must sum to 1 within tolerance"
         )
@@ -67,9 +67,9 @@ def _jensen_shannon_bits(
         right = candidate[label]
         midpoint = (left + right) / 2.0
         if left > 0.0:
-            divergence += 0.5 * left * math.log2(left / midpoint)
+            divergence += 0.5 * left * math.log(left / midpoint, 2)
         if right > 0.0:
-            divergence += 0.5 * right * math.log2(right / midpoint)
+            divergence += 0.5 * right * math.log(right / midpoint, 2)
     return divergence
 
 
@@ -171,7 +171,7 @@ def audit_probability_drift(
         candidate_top = min(labels, key=lambda label: (-candidate[label], label))
         top_label_changed = baseline_top != candidate_top
         top_label_change_count += int(top_label_changed)
-        total_variation = 0.5 * sum(
+        total_variation = 0.5 * math.fsum(
             abs(candidate[label] - baseline[label]) for label in labels
         )
         js_divergence = _jensen_shannon_bits(baseline, candidate)
@@ -193,10 +193,10 @@ def audit_probability_drift(
             )
 
     case_count = len(case_details)
-    mean_total_variation = sum(
+    mean_total_variation = math.fsum(
         detail["total_variation"] for detail in case_details
     ) / case_count
-    mean_js_divergence = sum(
+    mean_js_divergence = math.fsum(
         detail["js_divergence_bits"] for detail in case_details
     ) / case_count
     maximum_tv = min(

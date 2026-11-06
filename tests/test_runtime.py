@@ -184,6 +184,23 @@ class RuntimeAuditTests(unittest.TestCase):
         self.assertEqual(alias_exit, 2)
         self.assertEqual(size_exit, 2)
 
+    def test_latencies_whose_total_overflows_are_rejected(self):
+        records = [{**record, "latency_ms": 1e308} for record in self.records]
+        with self.assertRaisesRegex(ValueError, "too large"):
+            audit_runtime(records)
+
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "runtime.jsonl"
+            dataset.write_text(
+                "\n".join(json.dumps(record) for record in records) + "\n",
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                exit_code = main([str(dataset)])
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("too large", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

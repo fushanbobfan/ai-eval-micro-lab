@@ -43,7 +43,7 @@ def _label_counts(
 
 
 def _kl_term(probability: float, midpoint: float) -> float:
-    return probability * math.log2(probability / midpoint) if probability else 0.0
+    return probability * math.log(probability / midpoint, 2) if probability else 0.0
 
 
 def audit_label_distribution(
@@ -107,7 +107,7 @@ def audit_label_distribution(
         )
 
     shifts.sort(key=lambda item: (-item["absolute_prevalence_delta"], item["label"]))
-    total_variation = 0.5 * sum(absolute_deltas)
+    total_variation = 0.5 * math.fsum(absolute_deltas)
     max_absolute_delta = max(absolute_deltas)
     metrics = {
         "reference_count": reference_count,

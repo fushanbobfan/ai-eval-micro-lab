@@ -148,13 +148,17 @@ def audit_runtime(
     failure_count = count - success_count
     latencies = [attempt["latency_ms"] for attempt in attempts]
     total_tokens = [attempt["total_tokens"] for attempt in attempts]
+    try:
+        mean_latency = math.fsum(latencies) / count
+    except OverflowError as error:
+        raise ValueError(f"{latency_field} values are too large to total") from error
     metrics = {
         "count": count,
         "success_count": success_count,
         "failure_count": failure_count,
         "success_rate": success_count / count,
         "latency_ms": {
-            "mean": sum(latencies) / count,
+            "mean": mean_latency,
             "p50": _nearest_rank(latencies, 0.50),
             "p95": _nearest_rank(latencies, 0.95),
             "maximum": max(latencies),

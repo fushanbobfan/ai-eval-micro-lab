@@ -89,9 +89,9 @@ def evaluate_consistency(
         exact_scores = [exact_match(left, right) for left, right in pairs]
         token_f1_scores = [token_f1(left, right) for left, right in pairs]
         exact_agreement = sum(exact_scores) / len(pairs)
-        token_f1_agreement = sum(token_f1_scores) / len(pairs)
+        token_f1_agreement = math.fsum(token_f1_scores) / len(pairs)
         exact_total += sum(exact_scores)
-        token_f1_total += sum(token_f1_scores)
+        token_f1_total += math.fsum(token_f1_scores)
         pair_total += len(pairs)
 
         case_reports.append(

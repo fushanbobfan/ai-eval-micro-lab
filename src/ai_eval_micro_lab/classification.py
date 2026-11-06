@@ -82,11 +82,11 @@ def evaluate_classification(
     metrics = {
         "count": count,
         "accuracy": sum(confusion_matrix[i][i] for i in range(len(labels))) / count,
-        "macro_precision": sum(item["precision"] for item in per_class)
+        "macro_precision": math.fsum(item["precision"] for item in per_class)
         / len(labels),
-        "macro_recall": sum(item["recall"] for item in per_class) / len(labels),
-        "macro_f1": sum(item["f1"] for item in per_class) / len(labels),
-        "weighted_f1": sum(item["f1"] * item["support"] for item in per_class)
+        "macro_recall": math.fsum(item["recall"] for item in per_class) / len(labels),
+        "macro_f1": math.fsum(item["f1"] for item in per_class) / len(labels),
+        "weighted_f1": math.fsum(item["f1"] * item["support"] for item in per_class)
         / count,
     }
     failures = []

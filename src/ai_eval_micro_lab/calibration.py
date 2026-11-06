@@ -69,7 +69,7 @@ def evaluate_calibration(
         if not values:
             continue
         count = len(values)
-        mean_confidence = sum(value[0] for value in values) / count
+        mean_confidence = math.fsum(value[0] for value in values) / count
         accuracy = sum(value[1] for value in values) / count
         gap = abs(mean_confidence - accuracy)
         weighted_gap += count * gap
@@ -89,8 +89,8 @@ def evaluate_calibration(
     metrics = {
         "count": count,
         "accuracy": sum(value[1] for value in validated) / count,
-        "mean_confidence": sum(value[0] for value in validated) / count,
-        "brier_score": sum(
+        "mean_confidence": math.fsum(value[0] for value in validated) / count,
+        "brier_score": math.fsum(
             (confidence - correct) ** 2 for confidence, correct in validated
         )
         / count,
