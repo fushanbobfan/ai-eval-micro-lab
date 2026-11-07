@@ -42,10 +42,10 @@ def paired_bootstrap(
         raise ValueError("confidence must be between 0 and 1")
 
     differences = [new - old for old, new in zip(baseline, candidate)]
-    observed = sum(differences) / len(differences)
+    observed = math.fsum(differences) / len(differences)
     generator = random.Random(seed)
     simulated = sorted(
-        sum(generator.choice(differences) for _ in differences) / len(differences)
+        math.fsum(generator.choice(differences) for _ in differences) / len(differences)
         for _ in range(samples)
     )
     tail = (1 - confidence) / 2
@@ -91,8 +91,8 @@ def compare_records(
     candidate_summary = {}
     deltas = {}
     for offset, (name, (old_scores, new_scores)) in enumerate(metric_scores.items()):
-        baseline_summary[name] = sum(old_scores) / len(old_scores)
-        candidate_summary[name] = sum(new_scores) / len(new_scores)
+        baseline_summary[name] = math.fsum(old_scores) / len(old_scores)
+        candidate_summary[name] = math.fsum(new_scores) / len(new_scores)
         deltas[name] = paired_bootstrap(
             old_scores,
             new_scores,

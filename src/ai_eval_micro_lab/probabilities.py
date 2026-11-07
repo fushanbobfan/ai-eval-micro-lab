@@ -135,7 +135,7 @@ def evaluate_probabilistic_classification(
             raise ValueError(f"record {index} must use the same score labels")
         if expected not in normalized_scores:
             raise ValueError(f"record {index} expected label is missing from scores")
-        probability_sum = sum(normalized_scores.values())
+        probability_sum = math.fsum(normalized_scores.values())
         if abs(probability_sum - 1.0) > probability_tolerance:
             raise ValueError(
                 f"record {index} probabilities must sum to 1 within tolerance"
@@ -173,7 +173,7 @@ def evaluate_probabilistic_classification(
             zero_expected_probability_count += 1
         log_losses.append(-math.log(max(expected_probability, log_floor)))
         brier_scores.append(
-            sum(
+            math.fsum(
                 (scores[label] - float(label == expected)) ** 2 for label in labels
             )
         )
@@ -189,7 +189,7 @@ def evaluate_probabilistic_classification(
         if not values:
             continue
         count = len(values)
-        mean_confidence = sum(value[0] for value in values) / count
+        mean_confidence = math.fsum(value[0] for value in values) / count
         accuracy = sum(value[1] for value in values) / count
         gap = abs(mean_confidence - accuracy)
         weighted_gap += count * gap
@@ -214,9 +214,9 @@ def evaluate_probabilistic_classification(
         "count": count,
         "accuracy": accuracy,
         "top_k_accuracy": top_k_accuracy,
-        "mean_confidence": sum(value[0] for value in confidences) / count,
-        "log_loss": sum(log_losses) / count,
-        "brier_score": sum(brier_scores) / count,
+        "mean_confidence": math.fsum(value[0] for value in confidences) / count,
+        "log_loss": math.fsum(log_losses) / count,
+        "brier_score": math.fsum(brier_scores) / count,
         "expected_calibration_error": weighted_gap / count,
         "zero_expected_probability_count": zero_expected_probability_count,
     }

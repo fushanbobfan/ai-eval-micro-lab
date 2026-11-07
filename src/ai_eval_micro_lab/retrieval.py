@@ -154,10 +154,10 @@ def evaluate_retrieval(
             hit_total += int(bool(ranks))
             reciprocal_rank_total += 1.0 / ranks[0] if ranks else 0.0
             recall_total += len(ranks) / len(relevant)
-            dcg = sum(1.0 / math.log2(rank + 1) for rank in ranks)
+            dcg = math.fsum(1.0 / math.log(rank + 1, 2) for rank in ranks)
             ideal_count = min(len(relevant), cutoff)
-            ideal_dcg = sum(
-                1.0 / math.log2(rank + 1)
+            ideal_dcg = math.fsum(
+                1.0 / math.log(rank + 1, 2)
                 for rank in range(1, ideal_count + 1)
             )
             ndcg_total += dcg / ideal_dcg

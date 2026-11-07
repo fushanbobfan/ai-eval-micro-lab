@@ -168,12 +168,12 @@ def evaluate_multilabel(
         "micro_precision": micro_precision,
         "micro_recall": micro_recall,
         "micro_f1": micro_f1,
-        "macro_precision": sum(item["precision"] for item in per_label)
+        "macro_precision": math.fsum(item["precision"] for item in per_label)
         / len(labels),
-        "macro_recall": sum(item["recall"] for item in per_label) / len(labels),
-        "macro_f1": sum(item["f1"] for item in per_label) / len(labels),
+        "macro_recall": math.fsum(item["recall"] for item in per_label) / len(labels),
+        "macro_f1": math.fsum(item["f1"] for item in per_label) / len(labels),
         "weighted_f1": (
-            sum(item["f1"] * item["support"] for item in per_label)
+            math.fsum(item["f1"] * item["support"] for item in per_label)
             / expected_assignments
             if expected_assignments
             else 0.0

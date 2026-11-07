@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections import Counter
 from collections.abc import Iterable, Mapping
@@ -46,6 +47,6 @@ def evaluate_records(records: Iterable[Mapping[str, str]]) -> dict[str, float | 
     return {
         "count": len(scores),
         "exact_match": sum(score[0] for score in scores) / len(scores),
-        "token_f1": sum(score[1] for score in scores) / len(scores),
+        "token_f1": math.fsum(score[1] for score in scores) / len(scores),
     }
 
