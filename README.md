@@ -4,10 +4,15 @@ Small, dependency-free evaluation tools for comparing model predictions with ref
 
 The basic evaluator provides normalized exact match and token-level F1 for JSONL datasets. Each line should contain `expected` and `predicted` strings.
 
+From the root of a clean clone, put `src` on the import path, run the evaluator on an example dataset, and run the tests:
+
 ```powershell
-python -m ai_eval_micro_lab.cli examples.jsonl
+$env:PYTHONPATH = "src"
+python -m ai_eval_micro_lab.cli examples/quality-gate.jsonl
 python -m unittest discover -s tests
 ```
+
+In bash, the first line is `export PYTHONPATH=src`. The other `python -m` commands in this README need the same setting.
 
 ## Multiclass classification evaluation
 
