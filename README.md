@@ -12,7 +12,7 @@ python -m ai_eval_micro_lab.cli examples/quality-gate.jsonl
 python -m unittest discover -s tests
 ```
 
-In bash, the first line is `export PYTHONPATH=src`. The other `python -m` commands in this README need the same setting.
+In bash, the first line is `export PYTHONPATH=src`. The other `python -m` commands in this README need the same setting. Where a line ends in a backtick to continue the command, bash ends it with a backslash.
 
 ## Multiclass classification evaluation
 
