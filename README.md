@@ -12,7 +12,7 @@ python -m ai_eval_micro_lab.cli examples/quality-gate.jsonl
 python -m unittest discover -s tests
 ```
 
-In bash, the first line is `export PYTHONPATH=src`. The other `python -m` commands in this README need the same setting.
+In bash, the first line is `export PYTHONPATH=src`. The other `python -m` commands in this README need the same setting. Where a line ends in a backtick to continue the command, bash ends it with a backslash.
 
 ## Multiclass classification evaluation
 
@@ -200,7 +200,7 @@ Exit code `0` means all minimums passed at `--gate-cutoff`, `1` reports structur
 Compare paired baseline and candidate rankings without requiring relevance judgments:
 
 ```powershell
-ai-eval-ranking-drift examples/ranking-drift.jsonl `
+python -m ai_eval_micro_lab.ranking_drift examples/ranking-drift.jsonl `
   --cutoff 1 --cutoff 2 --gate-cutoff 2 `
   --min-mean-jaccard 0.70 --max-top-item-change-rate 0.40
 ```
@@ -214,7 +214,7 @@ Exit code `0` means both gates passed at `--gate-cutoff`, `1` reports structured
 Audit paired numeric scores from a baseline and candidate evaluator configuration:
 
 ```powershell
-ai-eval-score-drift examples/score-drift.jsonl `
+python -m ai_eval_micro_lab.score_drift examples/score-drift.jsonl `
   --tolerance 0.15 `
   --max-abs-mean-shift 0.20 `
   --max-mean-absolute-change 0.25 `
